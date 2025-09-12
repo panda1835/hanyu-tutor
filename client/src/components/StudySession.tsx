@@ -96,6 +96,15 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
     onExit();
   };
 
+  const handleExit = () => {
+    // Process any accumulated results before exiting
+    if (results.length > 0) {
+      onComplete(results);
+    } else {
+      onExit();
+    }
+  };
+
   // Show session complete screen
   if (sessionComplete) {
     return (
@@ -153,7 +162,7 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={onExit}
+              onClick={handleExit}
               data-testid="button-exit-session"
             >
               <ArrowLeft className="h-5 w-5" />

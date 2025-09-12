@@ -200,10 +200,17 @@ class VocabularyService {
     let reviewedCount = 0;
 
     for (const result of results) {
-      if (result.wasSkipped) continue; // Skip words don't count toward stats
-      
       const wasNewWord = !this.userProgress.has(result.wordId);
-      this.updateWordProgress(result.wordId, result.isCorrect);
+      
+      // Always update progress to create entries for total count
+      // But handle skipped words differently
+      if (result.wasSkipped) {
+        // For skipped words, create basic progress entry without affecting spaced repetition
+        this.createBasicProgressEntry(result.wordId);
+      } else {
+        // For answered words, update full progress with spaced repetition
+        this.updateWordProgress(result.wordId, result.isCorrect);
+      }
       
       // Mark word as bookmarked if flagged
       if (bookmarkedWords.has(result.wordId)) {
@@ -213,10 +220,11 @@ class VocabularyService {
         }
       }
       
-      // Count words for daily stats
-      if (wasNewWord && result.isCorrect) {
+      // Count ALL interactions (including skipped) toward daily stats
+      // This ensures Know/Don't Know buttons count as study activity
+      if (wasNewWord) {
         learnedCount++;
-      } else if (!wasNewWord) {
+      } else {
         reviewedCount++;
       }
     }
@@ -228,6 +236,22 @@ class VocabularyService {
     this.updateDailyStats();
     this.saveLearningStatsToStorage();
     this.saveProgressToStorage();
+  }
+
+  // Create basic progress entry for skipped words
+  private createBasicProgressEntry(wordId: string): void {
+    if (!this.userProgress.has(wordId)) {
+      const basicProgress: LocalUserProgress = {
+        wordId,
+        status: 'learning',
+        correctCount: 0,
+        incorrectCount: 0,
+        fibonacciLevel: 0,
+        nextReview: null,
+        isBookmarked: false
+      };
+      this.userProgress.set(wordId, basicProgress);
+    }
   }
 
   // Update word progress based on study result
