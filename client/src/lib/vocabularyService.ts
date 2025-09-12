@@ -1,10 +1,21 @@
-import Papa from 'papaparse';
 import type { 
   VocabularyWord, 
-  UserProgress, 
+  UserProgress as BaseUserProgress, 
   LearningStats,
   FilterSettings 
 } from '@shared/schema';
+import vocabularyData from '../data/vocabulary.json';
+
+// Local storage interface for user progress - simpler than database schema
+interface LocalUserProgress {
+  wordId: string;
+  status: 'learning' | 'reviewing' | 'mastered';
+  correctCount: number;
+  incorrectCount: number;
+  fibonacciLevel: number;
+  nextReview: string | null;
+  isBookmarked?: boolean;
+}
 
 // Fibonacci sequence for spaced repetition intervals (in days)
 const FIBONACCI_INTERVALS = [1, 3, 4, 7, 11, 18, 29];
@@ -21,7 +32,7 @@ function generateStableId(character: string, pinyin: string, definition: string)
   return 'word_' + Math.abs(hash).toString();
 }
 
-interface CSVRow {
+interface JSONVocabularyItem {
   character: string;
   level: string;
   category: string;
@@ -33,11 +44,12 @@ export interface StudyResult {
   wordId: string;
   isCorrect: boolean;
   responseTime: number;
+  wasSkipped?: boolean;
 }
 
 class VocabularyService {
   private vocabularyWords: VocabularyWord[] = [];
-  private userProgress: Map<string, UserProgress> = new Map();
+  private userProgress: Map<string, LocalUserProgress> = new Map();
   private learningStats: LearningStats = {
     dailyGoal: 20,
     reviewLimit: 50,
@@ -49,53 +61,42 @@ class VocabularyService {
 
   constructor() {
     this.loadFromStorage();
+    // Load vocabulary from JSON if not already loaded
+    if (this.vocabularyWords.length === 0) {
+      this.loadVocabularyFromJSON();
+    }
   }
 
-  // Parse CSV data and load vocabulary with reconciliation
-  async loadVocabularyFromCSV(csvText: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      Papa.parse<CSVRow>(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.errors.length > 0) {
-            console.warn('CSV parsing errors:', results.errors);
-          }
-
-          // Parse new vocabulary with stable IDs
-          const newVocabulary = results.data
-            .map(row => {
-              const character = row.character?.trim() || '';
-              const level = row.level?.trim() || '';
-              const category = row.category?.trim() || '';
-              const pinyin = row.pinyin?.trim() || '';
-              const definition = row.definition?.trim() || '';
-              
-              if (!character || !definition) return null;
-              
-              return {
-                id: generateStableId(character, pinyin, definition),
-                character,
-                level,
-                category,
-                pinyin,
-                definition,
-              };
-            })
-            .filter((word): word is VocabularyWord => word !== null);
-
-          // Reconcile with existing data
-          this.reconcileVocabulary(newVocabulary);
+  // Load vocabulary from JSON file
+  loadVocabularyFromJSON(): void {
+    try {
+      const newVocabulary = (vocabularyData as JSONVocabularyItem[])
+        .map(item => {
+          const character = item.character?.trim() || '';
+          const level = item.level?.trim() || '';
+          const category = item.category?.trim() || '';
+          const pinyin = item.pinyin?.trim() || '';
+          const definition = item.definition?.trim() || '';
           
-          this.saveVocabularyToStorage();
-          this.saveProgressToStorage(); // Save progress after reconciliation
-          resolve();
-        },
-        error: (error: any) => {
-          reject(error);
-        }
-      });
-    });
+          if (!character || !definition) return null;
+
+          return {
+            id: generateStableId(character, pinyin, definition),
+            character,
+            level,
+            category,
+            pinyin,
+            definition
+          } as VocabularyWord;
+        })
+        .filter(word => word !== null);
+
+      // Reconcile with existing progress
+      this.reconcileVocabulary(newVocabulary);
+      this.saveVocabularyToStorage();
+    } catch (error) {
+      console.error('Error loading vocabulary from JSON:', error);
+    }
   }
 
   // Reconcile new vocabulary with existing progress data
@@ -146,22 +147,29 @@ class VocabularyService {
     });
   }
 
-  // Get words for learning (new words not yet studied) with daily limit enforcement
-  getWordsForLearning(filters: FilterSettings, requestedLimit: number): VocabularyWord[] {
-    const filtered = this.getFilteredVocabulary(filters);
-    const availableWords = filtered.filter(word => !this.userProgress.has(word.id));
-    
-    // Enforce daily learning limit
+  // Get words for learning (new words) - shuffled with daily limit enforcement
+  getWordsForLearning(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
     const remainingToday = this.getRemainingDailyLearningQuota();
-    const actualLimit = Math.min(requestedLimit, remainingToday);
+    if (remainingToday <= 0) return [];
+
+    const filteredWords = this.getFilteredVocabulary(filters)
+      .filter(word => {
+        const progress = this.userProgress.get(word.id!);
+        return !progress || progress.status === 'learning';
+      });
     
-    return availableWords.slice(0, actualLimit);
+    // Shuffle the words for varied learning order
+    const shuffledWords = [...filteredWords].sort(() => Math.random() - 0.5);
+    
+    return shuffledWords.slice(0, remainingToday);
   }
 
   // Get words for review based on spaced repetition schedule with daily limit enforcement
-  getWordsForReview(filters: FilterSettings, requestedLimit: number): VocabularyWord[] {
-    const filtered = this.getFilteredVocabulary(filters);
-    const dueWords = filtered
+  getWordsForReview(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
+    const remainingToday = this.getRemainingDailyReviewQuota();
+    if (remainingToday <= 0) return [];
+
+    const filteredWords = this.getFilteredVocabulary(filters)
       .filter(word => {
         const progress = this.userProgress.get(word.id);
         return progress && this.isWordDueForReview(progress);
@@ -176,157 +184,175 @@ class VocabularyService {
         }
         return 0;
       });
-
-    // Enforce daily review limit
-    const remainingToday = this.getRemainingDailyReviewQuota();
-    const actualLimit = Math.min(requestedLimit, remainingToday);
     
-    return dueWords.slice(0, actualLimit);
+    return filteredWords.slice(0, remainingToday);
   }
 
   // Check if a word is due for review
-  private isWordDueForReview(progress: UserProgress): boolean {
-    if (!progress.nextReview) return false;
+  private isWordDueForReview(progress: LocalUserProgress): boolean {
+    if (!progress.nextReview || progress.status === 'mastered') return false;
     return new Date(progress.nextReview) <= new Date();
   }
 
-  // Process study session results and update progress
-  processStudyResults(results: StudyResult[], mode: 'learn' | 'review'): void {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Update daily stats
-    this.updateDailyStats(today);
-    
-    results.forEach(result => {
-      const word = this.vocabularyWords.find(w => w.id === result.wordId);
-      if (!word) return;
+  // Process study results with bookmark support
+  processStudyResults(results: StudyResult[], bookmarkedWords: Set<string> = new Set()): void {
+    let learnedCount = 0;
+    let reviewedCount = 0;
 
-      let progress = this.userProgress.get(result.wordId);
+    for (const result of results) {
+      if (result.wasSkipped) continue; // Skip words don't count toward stats
       
-      if (!progress) {
-        // New word
-        progress = {
-          id: `progress_${result.wordId}`,
-          userId: 'local_user',
-          wordId: result.wordId,
-          status: 'learning',
-          lastReviewed: new Date(),
-          nextReview: this.calculateNextReview(0, result.isCorrect),
-          reviewCount: 1,
-          correctCount: result.isCorrect ? 1 : 0,
-          fibonacciLevel: result.isCorrect ? 1 : 0,
-        };
-        this.learningStats.wordsLearnedToday++;
-      } else {
-        // Existing word review
-        progress.lastReviewed = new Date();
-        progress.reviewCount = (progress.reviewCount || 0) + 1;
-        if (result.isCorrect) {
-          progress.correctCount = (progress.correctCount || 0) + 1;
-        }
-
-        // Update fibonacci level and next review date
-        const currentLevel = progress.fibonacciLevel || 0;
-        if (result.isCorrect) {
-          progress.fibonacciLevel = Math.min(currentLevel + 1, FIBONACCI_INTERVALS.length - 1);
-          progress.status = progress.fibonacciLevel >= FIBONACCI_INTERVALS.length - 1 ? 'mastered' : 'reviewing';
-        } else {
-          progress.fibonacciLevel = Math.max(0, currentLevel - 1);
-          progress.status = 'reviewing';
-        }
-
-        progress.nextReview = this.calculateNextReview(progress.fibonacciLevel, result.isCorrect);
-        
-        if (mode === 'review') {
-          this.learningStats.wordsReviewedToday++;
+      const wasNewWord = !this.userProgress.has(result.wordId);
+      this.updateWordProgress(result.wordId, result.isCorrect);
+      
+      // Mark word as bookmarked if flagged
+      if (bookmarkedWords.has(result.wordId)) {
+        const progress = this.userProgress.get(result.wordId);
+        if (progress) {
+          progress.isBookmarked = true;
         }
       }
-
-      this.userProgress.set(result.wordId, progress);
-    });
-
-    this.saveProgressToStorage();
+      
+      // Count words for daily stats
+      if (wasNewWord && result.isCorrect) {
+        learnedCount++;
+      } else if (!wasNewWord) {
+        reviewedCount++;
+      }
+    }
+    
+    // Update daily counters
+    this.incrementDailyStats(learnedCount, reviewedCount);
+    
+    // Update and save everything
+    this.updateDailyStats();
     this.saveLearningStatsToStorage();
+    this.saveProgressToStorage();
   }
 
-  // Calculate next review date based on fibonacci intervals
-  private calculateNextReview(fibonacciLevel: number, wasCorrect: boolean): Date {
-    const intervalDays = FIBONACCI_INTERVALS[Math.max(0, Math.min(fibonacciLevel, FIBONACCI_INTERVALS.length - 1))];
-    const nextReview = new Date();
-    nextReview.setDate(nextReview.getDate() + intervalDays);
-    return nextReview;
-  }
+  // Update word progress based on study result
+  private updateWordProgress(wordId: string, isCorrect: boolean): void {
+    let progress = this.userProgress.get(wordId);
+    
+    if (!progress) {
+      progress = {
+        wordId,
+        status: 'learning',
+        correctCount: 0,
+        incorrectCount: 0,
+        fibonacciLevel: 0,
+        nextReview: null,
+        isBookmarked: false
+      };
+      this.userProgress.set(wordId, progress);
+    }
 
-  // Update daily statistics and streak
-  private updateDailyStats(today: string): void {
-    if (this.learningStats.lastStudyDate !== today) {
-      // New study day
-      const lastDate = this.learningStats.lastStudyDate;
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      if (lastDate === yesterdayStr) {
-        // Consecutive day - increment streak
-        this.learningStats.currentStreak++;
-      } else if (lastDate !== today) {
-        // Gap in studying - reset streak
-        this.learningStats.currentStreak = 1;
+    if (isCorrect) {
+      progress.correctCount++;
+      progress.fibonacciLevel = Math.min(progress.fibonacciLevel + 1, FIBONACCI_INTERVALS.length - 1);
+      
+      // Set next review date
+      const daysToAdd = FIBONACCI_INTERVALS[progress.fibonacciLevel];
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + daysToAdd);
+      progress.nextReview = nextReview.toISOString();
+      
+      // Update status based on fibonacci level
+      if (progress.fibonacciLevel >= FIBONACCI_INTERVALS.length - 1) {
+        progress.status = 'mastered';
+      } else {
+        progress.status = 'reviewing';
       }
-
-      // Reset daily counters
-      this.learningStats.wordsLearnedToday = 0;
-      this.learningStats.wordsReviewedToday = 0;
-      this.learningStats.lastStudyDate = today;
+      
+      console.log('Correct answer for:', this.vocabularyWords.find(w => w.id === wordId)?.character);
+    } else {
+      progress.incorrectCount++;
+      progress.fibonacciLevel = Math.max(0, progress.fibonacciLevel - 1);
+      
+      // Set next review to tomorrow for incorrect answers
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + 1);
+      progress.nextReview = nextReview.toISOString();
+      progress.status = 'reviewing';
+      
+      console.log('Incorrect answer for:', this.vocabularyWords.find(w => w.id === wordId)?.character);
     }
   }
 
   // Get available levels and categories
   getAvailableLevels(): string[] {
-    return Array.from(new Set(this.vocabularyWords.map(w => w.level))).sort();
+    return Array.from(new Set(this.vocabularyWords.map(word => word.level))).sort();
   }
 
   getAvailableCategories(): string[] {
-    return Array.from(new Set(this.vocabularyWords.map(w => w.category))).sort();
+    return Array.from(new Set(this.vocabularyWords.map(word => word.category))).sort();
   }
 
-  // Get learning statistics
-  getLearningStats(): LearningStats {
-    return { ...this.learningStats };
-  }
-
-  // Update learning settings
-  updateSettings(settings: Partial<LearningStats>): void {
-    this.learningStats = { ...this.learningStats, ...settings };
-    this.saveLearningStatsToStorage();
-  }
-
-  // Get total words learned
-  getTotalWordsLearned(): number {
-    return Array.from(this.userProgress.values()).length;
-  }
-
-  // Get remaining daily learning quota
+  // Daily limit management
   getRemainingDailyLearningQuota(): number {
-    const today = new Date().toISOString().split('T')[0];
-    this.updateDailyStats(today);
     return Math.max(0, this.learningStats.dailyGoal - this.learningStats.wordsLearnedToday);
   }
 
-  // Get remaining daily review quota
   getRemainingDailyReviewQuota(): number {
-    const today = new Date().toISOString().split('T')[0];
-    this.updateDailyStats(today);
     return Math.max(0, this.learningStats.reviewLimit - this.learningStats.wordsReviewedToday);
   }
 
-  // Check if daily goals have been reached
   isDailyLearningGoalReached(): boolean {
     return this.getRemainingDailyLearningQuota() === 0;
   }
 
   isDailyReviewGoalReached(): boolean {
     return this.getRemainingDailyReviewQuota() === 0;
+  }
+
+  // Manually increment daily counters when study session completes
+  incrementDailyStats(learnedCount: number, reviewedCount: number): void {
+    this.learningStats.wordsLearnedToday += learnedCount;
+    this.learningStats.wordsReviewedToday += reviewedCount;
+  }
+
+  // Update daily study statistics - FIXED to properly count session results
+  private updateDailyStats(): void {
+    const today = new Date().toDateString();
+    const lastStudyDate = this.learningStats.lastStudyDate;
+    
+    // Reset daily counters if it's a new day
+    if (!lastStudyDate || new Date(lastStudyDate).toDateString() !== today) {
+      this.learningStats.wordsLearnedToday = 0;
+      this.learningStats.wordsReviewedToday = 0;
+      
+      // Update streak
+      if (lastStudyDate) {
+        const daysDiff = Math.floor((Date.now() - new Date(lastStudyDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff === 1) {
+          this.learningStats.currentStreak++;
+        } else if (daysDiff > 1) {
+          this.learningStats.currentStreak = 1;
+        }
+      } else {
+        this.learningStats.currentStreak = 1;
+      }
+      
+      this.learningStats.lastStudyDate = today;
+    }
+  }
+
+  // Get total words learned (words that have been studied at least once)
+  getTotalWordsLearned(): number {
+    return this.userProgress.size;
+  }
+
+  // Get progress statistics
+  getProgressStats() {
+    const stats = { ...this.learningStats };
+    const reviewStats = this.getReviewStats();
+    
+    return {
+      ...stats,
+      ...reviewStats,
+      totalWordsLearned: this.getTotalWordsLearned(),
+      bookmarkedCount: Array.from(this.userProgress.values()).filter(p => p.isBookmarked).length,
+    };
   }
 
   // Get review statistics
@@ -353,6 +379,46 @@ class VocabularyService {
     return { dueCount, overdueCount, masteredCount };
   }
 
+  // Toggle bookmark status for a word
+  toggleBookmark(wordId: string): boolean {
+    const progress = this.userProgress.get(wordId);
+    if (!progress) {
+      // Create new progress entry if it doesn't exist
+      const newProgress: LocalUserProgress = {
+        wordId,
+        status: 'learning',
+        correctCount: 0,
+        incorrectCount: 0,
+        fibonacciLevel: 0,
+        nextReview: null,
+        isBookmarked: true
+      };
+      this.userProgress.set(wordId, newProgress);
+      this.saveProgressToStorage();
+      return true;
+    }
+    
+    progress.isBookmarked = !progress.isBookmarked;
+    this.saveProgressToStorage();
+    return progress.isBookmarked;
+  }
+
+  // Get bookmarked words
+  getBookmarkedWords(filterSettings: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
+    const bookmarkedIds = Array.from(this.userProgress.entries())
+      .filter(([_, progress]) => progress.isBookmarked)
+      .map(([wordId, _]) => wordId);
+
+    return this.getFilteredVocabulary(filterSettings)
+      .filter(word => bookmarkedIds.includes(word.id!));
+  }
+
+  // Check if a word is bookmarked
+  isWordBookmarked(wordId: string): boolean {
+    const progress = this.userProgress.get(wordId);
+    return progress?.isBookmarked === true;
+  }
+
   // Storage methods
   private loadFromStorage(): void {
     try {
@@ -365,8 +431,8 @@ class VocabularyService {
       // Load progress
       const progressData = localStorage.getItem('user_progress');
       if (progressData) {
-        const progressArray: UserProgress[] = JSON.parse(progressData);
-        this.userProgress = new Map(progressArray.filter(p => p.wordId).map(p => [p.wordId!, p]));
+        const progressArray: LocalUserProgress[] = JSON.parse(progressData);
+        this.userProgress = new Map(progressArray.filter(p => p.wordId).map(p => [p.wordId, p]));
       }
 
       // Load stats
@@ -374,6 +440,9 @@ class VocabularyService {
       if (statsData) {
         this.learningStats = { ...this.learningStats, ...JSON.parse(statsData) };
       }
+      
+      // Check if it's a new day and reset counters if needed
+      this.updateDailyStats();
     } catch (error) {
       console.warn('Error loading from storage:', error);
     }
