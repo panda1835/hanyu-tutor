@@ -9,6 +9,18 @@ import type {
 // Fibonacci sequence for spaced repetition intervals (in days)
 const FIBONACCI_INTERVALS = [1, 3, 4, 7, 11, 18, 29];
 
+// Simple hash function for generating stable IDs
+function generateStableId(character: string, pinyin: string, definition: string): string {
+  const combined = character + '|' + pinyin + '|' + definition;
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return 'word_' + Math.abs(hash).toString();
+}
+
 interface CSVRow {
   character: string;
   level: string;
@@ -39,7 +51,7 @@ class VocabularyService {
     this.loadFromStorage();
   }
 
-  // Parse CSV data and load vocabulary
+  // Parse CSV data and load vocabulary with reconciliation
   async loadVocabularyFromCSV(csvText: string): Promise<void> {
     return new Promise((resolve, reject) => {
       Papa.parse<CSVRow>(csvText, {
@@ -50,16 +62,33 @@ class VocabularyService {
             console.warn('CSV parsing errors:', results.errors);
           }
 
-          this.vocabularyWords = results.data.map((row, index) => ({
-            id: `word_${index + 1}`,
-            character: row.character?.trim() || '',
-            level: row.level?.trim() || '',
-            category: row.category?.trim() || '',
-            pinyin: row.pinyin?.trim() || '',
-            definition: row.definition?.trim() || '',
-          })).filter(word => word.character && word.definition);
+          // Parse new vocabulary with stable IDs
+          const newVocabulary = results.data
+            .map(row => {
+              const character = row.character?.trim() || '';
+              const level = row.level?.trim() || '';
+              const category = row.category?.trim() || '';
+              const pinyin = row.pinyin?.trim() || '';
+              const definition = row.definition?.trim() || '';
+              
+              if (!character || !definition) return null;
+              
+              return {
+                id: generateStableId(character, pinyin, definition),
+                character,
+                level,
+                category,
+                pinyin,
+                definition,
+              };
+            })
+            .filter((word): word is VocabularyWord => word !== null);
 
+          // Reconcile with existing data
+          this.reconcileVocabulary(newVocabulary);
+          
           this.saveVocabularyToStorage();
+          this.saveProgressToStorage(); // Save progress after reconciliation
           resolve();
         },
         error: (error: any) => {
@@ -67,6 +96,35 @@ class VocabularyService {
         }
       });
     });
+  }
+
+  // Reconcile new vocabulary with existing progress data
+  private reconcileVocabulary(newVocabulary: VocabularyWord[]): void {
+    const newWordIds = new Set(newVocabulary.map(w => w.id));
+    const currentWordIds = new Set(this.vocabularyWords.map(w => w.id));
+    
+    // Update vocabulary list
+    this.vocabularyWords = newVocabulary;
+    
+    // Clean up orphaned progress entries (words that no longer exist)
+    const orphanedProgressEntries: string[] = [];
+    this.userProgress.forEach((progress, wordId) => {
+      if (!newWordIds.has(wordId)) {
+        orphanedProgressEntries.push(wordId);
+      }
+    });
+    
+    // Remove orphaned entries
+    orphanedProgressEntries.forEach(wordId => {
+      this.userProgress.delete(wordId);
+    });
+    
+    // Log reconciliation results
+    const added = newVocabulary.filter(w => !currentWordIds.has(w.id)).length;
+    const removed = Array.from(currentWordIds).filter(id => !newWordIds.has(id)).length;
+    const preserved = Array.from(this.userProgress.keys()).filter(id => newWordIds.has(id)).length;
+    
+    console.log(`Vocabulary reconciliation: ${added} added, ${removed} removed, ${preserved} progress entries preserved, ${orphanedProgressEntries.length} orphaned entries cleaned up`);
   }
 
   // Get filtered vocabulary based on user settings
@@ -88,16 +146,20 @@ class VocabularyService {
     });
   }
 
-  // Get words for learning (new words not yet studied)
-  getWordsForLearning(filters: FilterSettings, limit: number): VocabularyWord[] {
+  // Get words for learning (new words not yet studied) with daily limit enforcement
+  getWordsForLearning(filters: FilterSettings, requestedLimit: number): VocabularyWord[] {
     const filtered = this.getFilteredVocabulary(filters);
-    return filtered
-      .filter(word => !this.userProgress.has(word.id))
-      .slice(0, limit);
+    const availableWords = filtered.filter(word => !this.userProgress.has(word.id));
+    
+    // Enforce daily learning limit
+    const remainingToday = this.getRemainingDailyLearningQuota();
+    const actualLimit = Math.min(requestedLimit, remainingToday);
+    
+    return availableWords.slice(0, actualLimit);
   }
 
-  // Get words for review based on spaced repetition schedule
-  getWordsForReview(filters: FilterSettings, limit: number): VocabularyWord[] {
+  // Get words for review based on spaced repetition schedule with daily limit enforcement
+  getWordsForReview(filters: FilterSettings, requestedLimit: number): VocabularyWord[] {
     const filtered = this.getFilteredVocabulary(filters);
     const dueWords = filtered
       .filter(word => {
@@ -115,7 +177,11 @@ class VocabularyService {
         return 0;
       });
 
-    return dueWords.slice(0, limit);
+    // Enforce daily review limit
+    const remainingToday = this.getRemainingDailyReviewQuota();
+    const actualLimit = Math.min(requestedLimit, remainingToday);
+    
+    return dueWords.slice(0, actualLimit);
   }
 
   // Check if a word is due for review
@@ -238,6 +304,29 @@ class VocabularyService {
   // Get total words learned
   getTotalWordsLearned(): number {
     return Array.from(this.userProgress.values()).length;
+  }
+
+  // Get remaining daily learning quota
+  getRemainingDailyLearningQuota(): number {
+    const today = new Date().toISOString().split('T')[0];
+    this.updateDailyStats(today);
+    return Math.max(0, this.learningStats.dailyGoal - this.learningStats.wordsLearnedToday);
+  }
+
+  // Get remaining daily review quota
+  getRemainingDailyReviewQuota(): number {
+    const today = new Date().toISOString().split('T')[0];
+    this.updateDailyStats(today);
+    return Math.max(0, this.learningStats.reviewLimit - this.learningStats.wordsReviewedToday);
+  }
+
+  // Check if daily goals have been reached
+  isDailyLearningGoalReached(): boolean {
+    return this.getRemainingDailyLearningQuota() === 0;
+  }
+
+  isDailyReviewGoalReached(): boolean {
+    return this.getRemainingDailyReviewQuota() === 0;
   }
 
   // Get review statistics

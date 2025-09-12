@@ -130,6 +130,12 @@ function App() {
   // Get words for current study mode
   const learnWords = vocabularyService.getWordsForLearning(filterSettings, appSettings.dailyGoal);
   const reviewWords = vocabularyService.getWordsForReview(filterSettings, appSettings.reviewLimit);
+  
+  // Check daily limits
+  const isDailyLearningGoalReached = vocabularyService.isDailyLearningGoalReached();
+  const isDailyReviewGoalReached = vocabularyService.isDailyReviewGoalReached();
+  const remainingLearningQuota = vocabularyService.getRemainingDailyLearningQuota();
+  const remainingReviewQuota = vocabularyService.getRemainingDailyReviewQuota();
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -270,11 +276,28 @@ function App() {
                 />
 
                 {/* Start Study Button */}
-                <div className="flex justify-center pt-4">
+                <div className="flex flex-col items-center pt-4 space-y-2">
+                  {studyMode === 'learn' && isDailyLearningGoalReached && (
+                    <p className="text-sm text-muted-foreground">Daily learning goal reached! Come back tomorrow or try review mode.</p>
+                  )}
+                  {studyMode === 'review' && isDailyReviewGoalReached && (
+                    <p className="text-sm text-muted-foreground">Daily review limit reached! Come back tomorrow or try learning mode.</p>
+                  )}
+                  {studyMode === 'learn' && !isDailyLearningGoalReached && remainingLearningQuota < appSettings.dailyGoal && (
+                    <p className="text-sm text-muted-foreground">{remainingLearningQuota} words remaining today</p>
+                  )}
+                  {studyMode === 'review' && !isDailyReviewGoalReached && remainingReviewQuota < appSettings.reviewLimit && (
+                    <p className="text-sm text-muted-foreground">{remainingReviewQuota} reviews remaining today</p>
+                  )}
+                  
                   <Button
                     size="lg"
                     onClick={() => handleStartStudy(studyMode)}
-                    disabled={studyMode === 'learn' ? learnWords.length === 0 : reviewWords.length === 0}
+                    disabled={
+                      studyMode === 'learn' 
+                        ? learnWords.length === 0 || isDailyLearningGoalReached
+                        : reviewWords.length === 0 || isDailyReviewGoalReached
+                    }
                     data-testid="button-start-study"
                     className="px-8 py-3 text-lg"
                   >
