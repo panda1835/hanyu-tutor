@@ -66,7 +66,8 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
     const newResult: StudyResult = {
       wordId: currentWord.id,
       isCorrect: false,
-      responseTime: Date.now() - startTime
+      responseTime: Date.now() - startTime,
+      wasSkipped: true
     };
 
     const newResults = [...results, newResult];
@@ -202,6 +203,7 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
           showAnswer={showAnswer}
           onFlip={handleFlip}
           onAnswer={handleAnswer}
+          onSkip={handleSkip}
         />
       </div>
     </div>

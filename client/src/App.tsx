@@ -12,12 +12,9 @@ import ProgressTracker from "./components/ProgressTracker";
 import FilterPanel from "./components/FilterPanel";
 import StudySession from "./components/StudySession";
 import Settings from "./components/Settings";
-import CSVImporter from "./components/CSVImporter";
 
 import { vocabularyService } from "./lib/vocabularyService";
-import { csvData } from "./lib/csvData";
 import type { VocabularyWord } from "@shared/schema";
-import { Upload } from "lucide-react";
 
 
 type StudyMode = 'learn' | 'review';
@@ -56,22 +53,11 @@ function App() {
 
   // Real progress tracking state
   const [progressStats, setProgressStats] = useState(() => {
-    const stats = vocabularyService.getLearningStats();
-    const reviewStats = vocabularyService.getReviewStats();
-    return {
-      wordsLearnedToday: stats.wordsLearnedToday,
-      wordsReviewedToday: stats.wordsReviewedToday,
-      currentStreak: stats.currentStreak,
-      totalWordsLearned: vocabularyService.getTotalWordsLearned(),
-      lastStudyDate: stats.lastStudyDate,
-      dueCount: reviewStats.dueCount,
-      masteredCount: reviewStats.masteredCount
-    };
+    return vocabularyService.getProgressStats();
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [vocabularyLoaded, setVocabularyLoaded] = useState(false);
-  const [showImporter, setShowImporter] = useState(false);
 
   // Persist theme changes
   useEffect(() => {
@@ -90,37 +76,14 @@ function App() {
 
   // Initialize vocabulary data
   useEffect(() => {
-    const initVocabulary = async () => {
-      try {
-        // Load CSV data if not already loaded
-        const existingWords = vocabularyService.getFilteredVocabulary({ selectedLevels: [], selectedCategories: [], showOnlyDue: false });
-        if (existingWords.length === 0) {
-          await vocabularyService.loadVocabularyFromCSV(csvData);
-        }
-        setVocabularyLoaded(true);
-      } catch (error) {
-        console.error('Error loading vocabulary:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initVocabulary();
+    // Vocabulary is automatically loaded from JSON in the service constructor
+    setVocabularyLoaded(true);
+    setIsLoading(false);
   }, []);
 
   // Update progress stats when needed
   const refreshProgressStats = () => {
-    const stats = vocabularyService.getLearningStats();
-    const reviewStats = vocabularyService.getReviewStats();
-    setProgressStats({
-      wordsLearnedToday: stats.wordsLearnedToday,
-      wordsReviewedToday: stats.wordsReviewedToday,
-      currentStreak: stats.currentStreak,
-      totalWordsLearned: vocabularyService.getTotalWordsLearned(),
-      lastStudyDate: stats.lastStudyDate,
-      dueCount: reviewStats.dueCount,
-      masteredCount: reviewStats.masteredCount
-    });
+    setProgressStats(vocabularyService.getProgressStats());
   };
 
   // Get available levels and categories for filters
@@ -128,8 +91,8 @@ function App() {
   const availableCategories = vocabularyService.getAvailableCategories();
 
   // Get words for current study mode
-  const learnWords = vocabularyService.getWordsForLearning(filterSettings, appSettings.dailyGoal);
-  const reviewWords = vocabularyService.getWordsForReview(filterSettings, appSettings.reviewLimit);
+  const learnWords = vocabularyService.getWordsForLearning(filterSettings);
+  const reviewWords = vocabularyService.getWordsForReview(filterSettings);
   
   // Check daily limits
   const isDailyLearningGoalReached = vocabularyService.isDailyLearningGoalReached();
@@ -149,7 +112,7 @@ function App() {
   const handleCompleteSession = (results: any[]) => {
     console.log('Session completed with results:', results);
     // Process results through vocabulary service
-    vocabularyService.processStudyResults(results, studyMode);
+    vocabularyService.processStudyResults(results);
     // Refresh progress stats
     refreshProgressStats();
     setIsInSession(false);
@@ -157,16 +120,6 @@ function App() {
 
   const handleExitSession = () => {
     setIsInSession(false);
-  };
-
-  const handleImportComplete = (wordCount: number) => {
-    setShowImporter(false);
-    refreshProgressStats();
-    setVocabularyLoaded(true);
-  };
-
-  const handleImportCancel = () => {
-    setShowImporter(false);
   };
 
   // Show loading state
@@ -180,21 +133,6 @@ function App() {
               <p className="text-muted-foreground">Preparing your Chinese learning experience</p>
             </Card>
           </div>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // CSV Importer View
-  if (showImporter) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <CSVImporter
-            onImportComplete={handleImportComplete}
-            onCancel={handleImportCancel}
-          />
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
@@ -237,17 +175,7 @@ function App() {
           <main className="max-w-6xl mx-auto p-6 space-y-8">
             {currentPage === 'home' && (
               <>
-                <div className="flex items-center justify-between">
-                  <h1 className="text-3xl font-bold text-foreground">Study Chinese</h1>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowImporter(true)}
-                    data-testid="button-import-csv"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import CSV
-                  </Button>
-                </div>
+                <h1 className="text-3xl font-bold text-foreground">Study Chinese</h1>
 
                 {/* Progress Overview */}
                 <ProgressTracker
