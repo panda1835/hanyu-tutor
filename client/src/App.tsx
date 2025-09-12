@@ -13,75 +13,10 @@ import FilterPanel from "./components/FilterPanel";
 import StudySession from "./components/StudySession";
 import Settings from "./components/Settings";
 
+import { vocabularyService } from "./lib/vocabularyService";
+import { csvData } from "./lib/csvData";
 import type { VocabularyWord } from "@shared/schema";
 
-// Mock vocabulary data from the CSV
-const mockVocabularyData: VocabularyWord[] = [
-  {
-    id: "1",
-    character: "愛",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "ài",
-    definition: "to love, to be fond of, to like, affection, to be inclined (to do sth), to tend to (happen)"
-  },
-  {
-    id: "2",
-    character: "吧",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "ba",
-    definition: "(modal particle indicating suggestion or surmise), ...right?, ...OK?, ...I presume."
-  },
-  {
-    id: "3",
-    character: "八",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "bā",
-    definition: "eight, 8"
-  },
-  {
-    id: "4",
-    character: "爸爸",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "bàba/bà",
-    definition: "(coll.) father, dad, CL:個|个[ge4], 位[wei4]"
-  },
-  {
-    id: "5",
-    character: "茶",
-    level: "第1級",
-    category: "10.餐飲、烹飪",
-    pinyin: "chá",
-    definition: "tea, tea plant, CL:杯[bei1], 壺|壶[hu2]"
-  },
-  {
-    id: "6",
-    character: "車子",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "chēzi/chē",
-    definition: "car or other vehicle (bicycle, truck etc)"
-  },
-  {
-    id: "7",
-    character: "吃",
-    level: "第1級",
-    category: "核心詞",
-    pinyin: "chī",
-    definition: "to eat, to consume, to eat at (a cafeteria etc), to eradicate, to destroy, to absorb, to suffer (shock, injury, defeat etc)"
-  },
-  {
-    id: "8",
-    character: "大學",
-    level: "第1級",
-    category: "8.教育、學習",
-    pinyin: "dàxué",
-    definition: "university, college, CL:所[suo3]"
-  }
-]; //todo: remove mock functionality
 
 type StudyMode = 'learn' | 'review';
 type AppPage = 'home' | 'study' | 'stats';
@@ -117,17 +52,23 @@ function App() {
     };
   });
 
-  // Progress tracking state //todo: remove mock functionality
+  // Real progress tracking state
   const [progressStats, setProgressStats] = useState(() => {
-    const saved = localStorage.getItem('progressStats');
-    return saved ? JSON.parse(saved) : {
-      wordsLearnedToday: 12,
-      wordsReviewedToday: 8,
-      currentStreak: 7,
-      totalWordsLearned: 156,
-      lastStudyDate: new Date().toISOString().split('T')[0]
+    const stats = vocabularyService.getLearningStats();
+    const reviewStats = vocabularyService.getReviewStats();
+    return {
+      wordsLearnedToday: stats.wordsLearnedToday,
+      wordsReviewedToday: stats.wordsReviewedToday,
+      currentStreak: stats.currentStreak,
+      totalWordsLearned: vocabularyService.getTotalWordsLearned(),
+      lastStudyDate: stats.lastStudyDate,
+      dueCount: reviewStats.dueCount,
+      masteredCount: reviewStats.masteredCount
     };
   });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [vocabularyLoaded, setVocabularyLoaded] = useState(false);
 
   // Persist theme changes
   useEffect(() => {
@@ -144,29 +85,48 @@ function App() {
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
   }, [appSettings]);
 
-  // Persist progress stats
+  // Initialize vocabulary data
   useEffect(() => {
-    localStorage.setItem('progressStats', JSON.stringify(progressStats));
-  }, [progressStats]);
+    const initVocabulary = async () => {
+      try {
+        // Load CSV data if not already loaded
+        const existingWords = vocabularyService.getFilteredVocabulary({ selectedLevels: [], selectedCategories: [], showOnlyDue: false });
+        if (existingWords.length === 0) {
+          await vocabularyService.loadVocabularyFromCSV(csvData);
+        }
+        setVocabularyLoaded(true);
+      } catch (error) {
+        console.error('Error loading vocabulary:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Get filtered words based on current filters
-  const getFilteredWords = () => {
-    return mockVocabularyData.filter(word => {
-      const levelMatch = filterSettings.selectedLevels.length === 0 || 
-                        filterSettings.selectedLevels.includes(word.level);
-      const categoryMatch = filterSettings.selectedCategories.length === 0 || 
-                           filterSettings.selectedCategories.includes(word.category);
-      return levelMatch && categoryMatch;
+    initVocabulary();
+  }, []);
+
+  // Update progress stats when needed
+  const refreshProgressStats = () => {
+    const stats = vocabularyService.getLearningStats();
+    const reviewStats = vocabularyService.getReviewStats();
+    setProgressStats({
+      wordsLearnedToday: stats.wordsLearnedToday,
+      wordsReviewedToday: stats.wordsReviewedToday,
+      currentStreak: stats.currentStreak,
+      totalWordsLearned: vocabularyService.getTotalWordsLearned(),
+      lastStudyDate: stats.lastStudyDate,
+      dueCount: reviewStats.dueCount,
+      masteredCount: reviewStats.masteredCount
     });
   };
 
-  // Get unique levels and categories for filters
-  const availableLevels = Array.from(new Set(mockVocabularyData.map(w => w.level)));
-  const availableCategories = Array.from(new Set(mockVocabularyData.map(w => w.category)));
+  // Get available levels and categories for filters
+  const availableLevels = vocabularyService.getAvailableLevels();
+  const availableCategories = vocabularyService.getAvailableCategories();
 
-  const filteredWords = getFilteredWords();
-  const learnWords = filteredWords.slice(0, appSettings.dailyGoal);
-  const reviewWords = filteredWords.slice(0, appSettings.reviewLimit); //todo: remove mock functionality - should be based on spaced repetition schedule
+  // Get words for current study mode
+  const learnWords = vocabularyService.getWordsForLearning(filterSettings, appSettings.dailyGoal);
+  const reviewWords = vocabularyService.getWordsForReview(filterSettings, appSettings.reviewLimit);
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -179,18 +139,33 @@ function App() {
 
   const handleCompleteSession = (results: any[]) => {
     console.log('Session completed with results:', results);
-    //todo: remove mock functionality - should update progress and schedule next reviews
-    setProgressStats((prev: any) => ({
-      ...prev,
-      wordsLearnedToday: studyMode === 'learn' ? prev.wordsLearnedToday + results.length : prev.wordsLearnedToday,
-      wordsReviewedToday: studyMode === 'review' ? prev.wordsReviewedToday + results.length : prev.wordsReviewedToday
-    }));
+    // Process results through vocabulary service
+    vocabularyService.processStudyResults(results, studyMode);
+    // Refresh progress stats
+    refreshProgressStats();
     setIsInSession(false);
   };
 
   const handleExitSession = () => {
     setIsInSession(false);
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <Card className="p-8 text-center">
+              <h2 className="text-2xl font-semibold mb-4">Loading Vocabulary...</h2>
+              <p className="text-muted-foreground">Preparing your Chinese learning experience</p>
+            </Card>
+          </div>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   // Study Session View
   if (isInSession) {
@@ -285,20 +260,20 @@ function App() {
                   <h2 className="text-xl font-semibold mb-4">Detailed Statistics</h2>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div>
-                      <p className="text-2xl font-bold text-primary">{filteredWords.length}</p>
-                      <p className="text-sm text-muted-foreground">Available Words</p>
+                      <p className="text-2xl font-bold text-primary">{availableLevels.length > 0 ? vocabularyService.getFilteredVocabulary({ selectedLevels: [], selectedCategories: [], showOnlyDue: false }).length : 0}</p>
+                      <p className="text-sm text-muted-foreground">Total Words</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-chart-2">85%</p>
-                      <p className="text-sm text-muted-foreground">Accuracy Rate</p> {/* todo: remove mock functionality */}
+                      <p className="text-2xl font-bold text-chart-2">{progressStats.masteredCount}</p>
+                      <p className="text-sm text-muted-foreground">Mastered Words</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-chart-3">23</p>
-                      <p className="text-sm text-muted-foreground">Due for Review</p> {/* todo: remove mock functionality */}
+                      <p className="text-2xl font-bold text-chart-3">{progressStats.dueCount}</p>
+                      <p className="text-sm text-muted-foreground">Due for Review</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-chart-1">4.2</p>
-                      <p className="text-sm text-muted-foreground">Avg Session Time</p> {/* todo: remove mock functionality */}
+                      <p className="text-2xl font-bold text-chart-1">{availableCategories.length}</p>
+                      <p className="text-sm text-muted-foreground">Categories</p>
                     </div>
                   </div>
                 </Card>
