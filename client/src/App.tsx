@@ -12,10 +12,12 @@ import ProgressTracker from "./components/ProgressTracker";
 import FilterPanel from "./components/FilterPanel";
 import StudySession from "./components/StudySession";
 import Settings from "./components/Settings";
+import CSVImporter from "./components/CSVImporter";
 
 import { vocabularyService } from "./lib/vocabularyService";
 import { csvData } from "./lib/csvData";
 import type { VocabularyWord } from "@shared/schema";
+import { Upload } from "lucide-react";
 
 
 type StudyMode = 'learn' | 'review';
@@ -69,6 +71,7 @@ function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [vocabularyLoaded, setVocabularyLoaded] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
 
   // Persist theme changes
   useEffect(() => {
@@ -150,6 +153,16 @@ function App() {
     setIsInSession(false);
   };
 
+  const handleImportComplete = (wordCount: number) => {
+    setShowImporter(false);
+    refreshProgressStats();
+    setVocabularyLoaded(true);
+  };
+
+  const handleImportCancel = () => {
+    setShowImporter(false);
+  };
+
   // Show loading state
   if (isLoading) {
     return (
@@ -161,6 +174,21 @@ function App() {
               <p className="text-muted-foreground">Preparing your Chinese learning experience</p>
             </Card>
           </div>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // CSV Importer View
+  if (showImporter) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <CSVImporter
+            onImportComplete={handleImportComplete}
+            onCancel={handleImportCancel}
+          />
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
@@ -203,6 +231,18 @@ function App() {
           <main className="max-w-6xl mx-auto p-6 space-y-8">
             {currentPage === 'home' && (
               <>
+                <div className="flex items-center justify-between">
+                  <h1 className="text-3xl font-bold text-foreground">Study Chinese</h1>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowImporter(true)}
+                    data-testid="button-import-csv"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import CSV
+                  </Button>
+                </div>
+
                 {/* Progress Overview */}
                 <ProgressTracker
                   wordsLearnedToday={progressStats.wordsLearnedToday}

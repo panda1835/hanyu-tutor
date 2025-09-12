@@ -1,10 +1,12 @@
 import { useState } from "react";
 import VocabularyCard from "./VocabularyCard";
+import SessionComplete from "./SessionComplete";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Pause, Play, SkipForward } from "lucide-react";
 import type { VocabularyWord } from "@shared/schema";
+import type { StudyResult } from "../lib/vocabularyService";
 
 interface StudySessionProps {
   words: VocabularyWord[];
@@ -13,11 +15,6 @@ interface StudySessionProps {
   onExit: () => void;
 }
 
-interface StudyResult {
-  wordId: string;
-  isCorrect: boolean;
-  responseTime: number;
-}
 
 export default function StudySession({ words, mode, onComplete, onExit }: StudySessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -25,6 +22,7 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
   const [results, setResults] = useState<StudyResult[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
+  const [sessionComplete, setSessionComplete] = useState(false);
 
   const currentWord = words[currentIndex];
   const progress = ((currentIndex) / words.length) * 100;
@@ -49,7 +47,9 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
 
     if (isLastWord) {
       // Session complete
-      onComplete(newResults);
+      setTimeout(() => {
+        setSessionComplete(true);
+      }, 1000);
     } else {
       // Move to next word
       setTimeout(() => {
@@ -73,7 +73,9 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
     setResults(newResults);
 
     if (isLastWord) {
-      onComplete(newResults);
+      setTimeout(() => {
+        setSessionComplete(true);
+      }, 500);
     } else {
       setCurrentIndex(currentIndex + 1);
       setShowAnswer(false);
@@ -84,6 +86,26 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
   const handlePause = () => {
     setIsPaused(!isPaused);
   };
+
+  const handleSessionComplete = () => {
+    onComplete(results);
+  };
+
+  const handleNewSession = () => {
+    onExit();
+  };
+
+  // Show session complete screen
+  if (sessionComplete) {
+    return (
+      <SessionComplete
+        results={results}
+        mode={mode}
+        onContinue={handleSessionComplete}
+        onNewSession={handleNewSession}
+      />
+    );
+  }
 
   if (isPaused) {
     return (
