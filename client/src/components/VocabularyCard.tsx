@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Volume2, CheckCircle, XCircle, Bookmark, BookmarkCheck } from "lucide-react";
+import { CheckCircle, XCircle, Bookmark, BookmarkCheck } from "lucide-react";
 import type { VocabularyWord } from "@shared/schema";
 import { vocabularyService } from "../lib/vocabularyService";
 
@@ -25,15 +25,6 @@ export default function VocabularyCard({
   const [isBookmarked, setIsBookmarked] = useState(
     vocabularyService.isWordBookmarked(word.id!)
   );
-  const handleSpeak = () => {
-    // Use Web Speech API to pronounce Chinese character
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(word.character);
-      utterance.lang = 'zh-CN';
-      utterance.rate = 0.8;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
 
   const handleCorrect = () => {
     console.log('Correct answer for:', word.character);
@@ -59,9 +50,27 @@ export default function VocabularyCard({
   return (
     <div className="w-full max-w-md mx-auto" data-testid="vocabulary-card">
       <Card 
-        className="min-h-[300px] flex flex-col items-center justify-center p-8 bg-card hover-elevate border border-card-border cursor-pointer transition-all duration-200" 
+        className="min-h-[300px] flex flex-col items-center justify-center p-8 bg-card hover-elevate border border-card-border cursor-pointer transition-all duration-200 relative" 
         onClick={!disabled ? onFlip : undefined}
       >
+        {/* Bookmark button - positioned absolutely in top-right */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleBookmark();
+          }}
+          data-testid="button-bookmark"
+          className="absolute top-2 right-2 flex items-center space-x-1"
+        >
+          {isBookmarked ? (
+            <BookmarkCheck className="h-4 w-4 text-yellow-500" />
+          ) : (
+            <Bookmark className="h-4 w-4" />
+          )}
+        </Button>
+
         {!showAnswer ? (
           // Character side
           <div className="flex flex-col items-center space-y-6 text-center">
@@ -70,38 +79,6 @@ export default function VocabularyCard({
             </div>
             <div className="text-lg text-muted-foreground font-mono">
               {word.pinyin}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSpeak();
-                }}
-                data-testid="button-speak"
-                className="flex items-center space-x-1"
-              >
-                <Volume2 className="h-4 w-4" />
-                <span>Listen</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleBookmark();
-                }}
-                data-testid="button-bookmark"
-                className="flex items-center space-x-1"
-              >
-                {isBookmarked ? (
-                  <BookmarkCheck className="h-4 w-4 text-yellow-500" />
-                ) : (
-                  <Bookmark className="h-4 w-4" />
-                )}
-                <span>Bookmark</span>
-              </Button>
             </div>
           </div>
         ) : (
@@ -129,71 +106,26 @@ export default function VocabularyCard({
       </Card>
 
       <div className="flex items-center justify-center space-x-4 mt-6">
-        {!showAnswer ? (
-          <>
-            <Button 
-              variant="outline"
-              onClick={handleSkip}
-              disabled={disabled || !onSkip}
-              data-testid="button-skip-know"
-              className="flex items-center space-x-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              <span>I Know This</span>
-            </Button>
-            <Button 
-              onClick={onFlip} 
-              disabled={disabled}
-              data-testid="button-flip-card"
-              className="flex items-center space-x-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>Show Answer</span>
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={handleSkip}
-              disabled={disabled || !onSkip}
-              data-testid="button-skip-dont-know"
-              className="flex items-center space-x-2"
-            >
-              <XCircle className="h-4 w-4" />
-              <span>Don't Know</span>
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button 
-              variant="destructive"
-              onClick={handleIncorrect}
-              disabled={disabled}
-              data-testid="button-incorrect"
-              className="flex items-center space-x-2"
-            >
-              <XCircle className="h-4 w-4" />
-              <span>Don't Know</span>
-            </Button>
-            <Button 
-              onClick={onFlip}
-              variant="ghost"
-              size="icon"
-              disabled={disabled}
-              data-testid="button-flip-back"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="default"
-              onClick={handleCorrect}
-              disabled={disabled}
-              data-testid="button-correct"
-              className="flex items-center space-x-2 bg-chart-2 hover:bg-chart-2/90 text-white"
-            >
-              <CheckCircle className="h-4 w-4" />
-              <span>Know</span>
-            </Button>
-          </>
-        )}
+        <Button 
+          variant="destructive"
+          onClick={handleIncorrect}
+          disabled={disabled}
+          data-testid="button-dont-know"
+          className="flex items-center space-x-2"
+        >
+          <XCircle className="h-4 w-4" />
+          <span>Don't Know</span>
+        </Button>
+        <Button 
+          variant="default"
+          onClick={handleCorrect}
+          disabled={disabled}
+          data-testid="button-know"
+          className="flex items-center space-x-2 bg-chart-2 hover:bg-chart-2/90 text-white"
+        >
+          <CheckCircle className="h-4 w-4" />
+          <span>I Know This</span>
+        </Button>
       </div>
     </div>
   );

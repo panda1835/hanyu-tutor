@@ -25,7 +25,7 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
   const [sessionComplete, setSessionComplete] = useState(false);
 
   const currentWord = words[currentIndex];
-  const progress = ((currentIndex) / words.length) * 100;
+  const progress = (results.length / words.length) * 100;
   const isLastWord = currentIndex === words.length - 1;
 
   const handleFlip = () => {
@@ -33,7 +33,10 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
   };
 
   const handleAnswer = (isCorrect: boolean) => {
-    if (!currentWord) return;
+    if (!currentWord || !currentWord.id) {
+      console.error('No current word or word ID missing', currentWord);
+      return;
+    }
 
     const responseTime = Date.now() - startTime;
     const newResult: StudyResult = {
@@ -61,7 +64,10 @@ export default function StudySession({ words, mode, onComplete, onExit }: StudyS
   };
 
   const handleSkip = () => {
-    if (!currentWord) return;
+    if (!currentWord || !currentWord.id) {
+      console.error('No current word or word ID missing', currentWord);
+      return;
+    }
 
     const newResult: StudyResult = {
       wordId: currentWord.id,

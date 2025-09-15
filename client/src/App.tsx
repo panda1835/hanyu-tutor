@@ -90,15 +90,19 @@ function App() {
   const availableLevels = vocabularyService.getAvailableLevels();
   const availableCategories = vocabularyService.getAvailableCategories();
 
-  // Get words for current study mode
-  const learnWords = vocabularyService.getWordsForLearning(filterSettings);
-  const reviewWords = vocabularyService.getWordsForReview(filterSettings);
-  
-  // Check daily limits
+  // Check daily limits first
   const isDailyLearningGoalReached = vocabularyService.isDailyLearningGoalReached();
   const isDailyReviewGoalReached = vocabularyService.isDailyReviewGoalReached();
   const remainingLearningQuota = vocabularyService.getRemainingDailyLearningQuota();
   const remainingReviewQuota = vocabularyService.getRemainingDailyReviewQuota();
+
+  // Get words for current study mode - including daily batches for re-study
+  const learnWords = isDailyLearningGoalReached 
+    ? vocabularyService.getTodaysBatchForLearning(filterSettings)
+    : vocabularyService.getWordsForLearning(filterSettings);
+  const reviewWords = isDailyReviewGoalReached
+    ? vocabularyService.getTodaysBatchForReview(filterSettings)
+    : vocabularyService.getWordsForReview(filterSettings);
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -205,11 +209,17 @@ function App() {
 
                 {/* Start Study Button */}
                 <div className="flex flex-col items-center pt-4 space-y-2">
-                  {studyMode === 'learn' && isDailyLearningGoalReached && (
-                    <p className="text-sm text-muted-foreground">Daily learning goal reached! Come back tomorrow or try review mode.</p>
+                  {studyMode === 'learn' && isDailyLearningGoalReached && learnWords.length > 0 && (
+                    <p className="text-sm text-muted-foreground">Daily learning goal reached! Re-studying today's batch of words.</p>
                   )}
-                  {studyMode === 'review' && isDailyReviewGoalReached && (
-                    <p className="text-sm text-muted-foreground">Daily review limit reached! Come back tomorrow or try learning mode.</p>
+                  {studyMode === 'learn' && isDailyLearningGoalReached && learnWords.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Daily learning goal reached! No more words available for today.</p>
+                  )}
+                  {studyMode === 'review' && isDailyReviewGoalReached && reviewWords.length > 0 && (
+                    <p className="text-sm text-muted-foreground">Daily review limit reached! Re-studying today's review batch.</p>
+                  )}
+                  {studyMode === 'review' && isDailyReviewGoalReached && reviewWords.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Daily review limit reached! No more reviews available for today.</p>
                   )}
                   {studyMode === 'learn' && !isDailyLearningGoalReached && remainingLearningQuota < appSettings.dailyGoal && (
                     <p className="text-sm text-muted-foreground">{remainingLearningQuota} words remaining today</p>
@@ -223,13 +233,13 @@ function App() {
                     onClick={() => handleStartStudy(studyMode)}
                     disabled={
                       studyMode === 'learn' 
-                        ? learnWords.length === 0 || isDailyLearningGoalReached
-                        : reviewWords.length === 0 || isDailyReviewGoalReached
+                        ? learnWords.length === 0
+                        : reviewWords.length === 0
                     }
                     data-testid="button-start-study"
                     className="px-8 py-3 text-lg"
                   >
-                    Start {studyMode === 'learn' ? 'Learning' : 'Review'} Session
+                    {studyMode === 'learn' && isDailyLearningGoalReached ? 'Re-study' : 'Start'} {studyMode === 'learn' ? 'Learning' : 'Review'} Session
                   </Button>
                 </div>
               </>

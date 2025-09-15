@@ -32,6 +32,24 @@ function generateStableId(character: string, pinyin: string, definition: string)
   return 'word_' + Math.abs(hash).toString();
 }
 
+// Seeded random number generator for consistent daily batches
+function seededRandom(seed: number): () => number {
+  let currentSeed = seed;
+  return function() {
+    currentSeed = (currentSeed * 9301 + 49297) % 233280;
+    return currentSeed / 233280;
+  };
+}
+
+// Get date-based seed for consistent daily batches
+function getDailyBatchSeed(): number {
+  const today = new Date();
+  const dateString = today.getFullYear() + '' + 
+                    String(today.getMonth() + 1).padStart(2, '0') + '' + 
+                    String(today.getDate()).padStart(2, '0');
+  return parseInt(dateString);
+}
+
 interface JSONVocabularyItem {
   character: string;
   level: string;
@@ -80,8 +98,14 @@ class VocabularyService {
           
           if (!character || !definition) return null;
 
+          const id = generateStableId(character, pinyin, definition);
+          if (!id) {
+            console.error('Failed to generate ID for word:', character, pinyin, definition);
+            return null;
+          }
+
           return {
-            id: generateStableId(character, pinyin, definition),
+            id,
             character,
             level,
             category,
@@ -94,6 +118,8 @@ class VocabularyService {
       // Reconcile with existing progress
       this.reconcileVocabulary(newVocabulary);
       this.saveVocabularyToStorage();
+      
+      console.log(`Loaded ${newVocabulary.length} vocabulary words successfully`);
     } catch (error) {
       console.error('Error loading vocabulary from JSON:', error);
     }
@@ -147,7 +173,7 @@ class VocabularyService {
     });
   }
 
-  // Get words for learning (new words) - shuffled with daily limit enforcement
+  // Get words for learning (new words) - shuffled with daily limit enforcement using date-based seeding
   getWordsForLearning(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
     const remainingToday = this.getRemainingDailyLearningQuota();
     if (remainingToday <= 0) return [];
@@ -158,13 +184,29 @@ class VocabularyService {
         return !progress || progress.status === 'learning';
       });
     
-    // Shuffle the words for varied learning order
-    const shuffledWords = [...filteredWords].sort(() => Math.random() - 0.5);
+    // Use date-based seeded shuffle for consistent daily batches
+    const seedRandom = seededRandom(getDailyBatchSeed());
+    const shuffledWords = [...filteredWords].sort(() => seedRandom() - 0.5);
     
     return shuffledWords.slice(0, remainingToday);
   }
 
-  // Get words for review based on spaced repetition schedule with daily limit enforcement
+  // Get today's batch of words for learning regardless of daily quota (for re-studying)
+  getTodaysBatchForLearning(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
+    const filteredWords = this.getFilteredVocabulary(filters)
+      .filter(word => {
+        const progress = this.userProgress.get(word.id!);
+        return !progress || progress.status === 'learning';
+      });
+    
+    // Use date-based seeded shuffle for consistent daily batches
+    const seedRandom = seededRandom(getDailyBatchSeed());
+    const shuffledWords = [...filteredWords].sort(() => seedRandom() - 0.5);
+    
+    return shuffledWords.slice(0, this.learningStats.dailyGoal);
+  }
+
+  // Get words for review based on spaced repetition schedule with daily limit enforcement and date-based seeding
   getWordsForReview(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
     const remainingToday = this.getRemainingDailyReviewQuota();
     if (remainingToday <= 0) return [];
@@ -184,8 +226,37 @@ class VocabularyService {
         }
         return 0;
       });
+
+    // Apply seeded shuffling after sorting by priority to maintain some consistency
+    const seedRandom = seededRandom(getDailyBatchSeed() + 1); // +1 for different seed than learning
+    const shuffledWords = [...filteredWords].sort(() => seedRandom() - 0.5);
     
-    return filteredWords.slice(0, remainingToday);
+    return shuffledWords.slice(0, remainingToday);
+  }
+
+  // Get today's batch of words for review regardless of daily quota (for re-studying)
+  getTodaysBatchForReview(filters: FilterSettings = { selectedLevels: [], selectedCategories: [], showOnlyDue: false }): VocabularyWord[] {
+    const filteredWords = this.getFilteredVocabulary(filters)
+      .filter(word => {
+        const progress = this.userProgress.get(word.id);
+        return progress && this.isWordDueForReview(progress);
+      })
+      .sort((a, b) => {
+        const progressA = this.userProgress.get(a.id)!;
+        const progressB = this.userProgress.get(b.id)!;
+        
+        // Prioritize overdue words
+        if (progressA.nextReview && progressB.nextReview) {
+          return new Date(progressA.nextReview).getTime() - new Date(progressB.nextReview).getTime();
+        }
+        return 0;
+      });
+
+    // Apply seeded shuffling after sorting by priority to maintain some consistency
+    const seedRandom = seededRandom(getDailyBatchSeed() + 1); // +1 for different seed than learning
+    const shuffledWords = [...filteredWords].sort(() => seedRandom() - 0.5);
+    
+    return shuffledWords.slice(0, this.learningStats.reviewLimit);
   }
 
   // Check if a word is due for review
