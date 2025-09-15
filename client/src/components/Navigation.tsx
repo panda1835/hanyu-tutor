@@ -38,11 +38,11 @@ export default function Navigation({
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg font-sans-sc">汉</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <img src="/logo.jpg" alt="OhBear Logo" className="w-7 h-7 rounded-md object-cover" />
               </div>
               <h1 className="text-xl font-semibold text-foreground">
-                Chinese Flashcards
+                OhBear
               </h1>
             </div>
 

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Pause, Play, SkipForward } from "lucide-react";
-import type { VocabularyWord } from "@shared/schema";
+import type { VocabularyWord } from "@/types/schema";
 import type { StudyResult } from "../lib/vocabularyService";
 
 interface StudySessionProps {
