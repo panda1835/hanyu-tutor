@@ -14,7 +14,7 @@ import StudySession from "./components/StudySession";
 import Settings from "./components/Settings";
 
 import { vocabularyService } from "./lib/vocabularyService";
-import type { VocabularyWord } from "@shared/schema";
+import type { VocabularyWord } from "./types/schema";
 
 
 type StudyMode = 'learn' | 'review';

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Bookmark, BookmarkCheck } from "lucide-react";
-import type { VocabularyWord } from "@shared/schema";
+import type { VocabularyWord } from "../types/schema";
 import { vocabularyService } from "../lib/vocabularyService";
 
 interface VocabularyCardProps {

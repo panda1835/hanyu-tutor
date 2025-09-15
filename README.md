@@ -1,6 +1,6 @@
 # HanyuTutor - Chinese Vocabulary Learning App
 
-A modern, efficient Chinese vocabulary learning application built with React, TypeScript, and Express. Features spaced repetition, daily learning goals, and an intuitive flashcard interface designed for effective language learning.
+A modern, efficient Chinese vocabulary learning application built with React and TypeScript. Features spaced repetition, daily learning goals, and an intuitive flashcard interface designed for effective language learning.
 
 ## 🌟 Features
 
@@ -19,10 +19,12 @@ A modern, efficient Chinese vocabulary learning application built with React, Ty
 - **Dark/Light Mode**: Comfortable studying in any lighting condition
 
 ### Technical Features
-- **Offline-First**: Local storage for progress and vocabulary data
+- **Client-Side Only**: Pure frontend app with no backend required
+- **Local Storage**: All progress and settings saved in browser storage
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Real-time Progress**: Live updates of learning statistics and completion status
 - **Data Persistence**: Progress saved automatically with no data loss
+- **Easy Deployment**: Deploy anywhere as a static site
 
 ## 🚀 Quick Start
 
@@ -49,14 +51,15 @@ A modern, efficient Chinese vocabulary learning application built with React, Ty
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:5000` (or the port shown in terminal)
+   Navigate to `http://localhost:5173` (Vite dev server)
 
 ### Build for Production
 
 ```bash
 npm run build
-npm start
 ```
+
+The built files will be in the `dist/` directory, ready for deployment.
 
 ## 🛠️ Tech Stack
 
@@ -69,18 +72,10 @@ npm start
 - **React Query** - Powerful data fetching and caching
 - **Wouter** - Lightweight routing
 
-### Backend
-- **Express.js** - Fast, minimalist web framework
-- **TypeScript** - Type-safe server development
-- **Drizzle ORM** - Type-safe SQL query builder
-- **PostgreSQL** - Robust relational database
-- **Passport.js** - Authentication middleware
-
 ### Development Tools
 - **ESLint** - Code linting
 - **TypeScript** - Static type checking
 - **Vite** - Development server and bundling
-- **tsx** - TypeScript execution for development
 
 ## 🎯 How It Works
 
@@ -151,6 +146,6 @@ Track your progress with comprehensive metrics:
 
 ---
 
-**Happy Learning!** 🇨🇳📚
+**Happy Learning!** 📚
 
 Master Chinese vocabulary with HanyuTutor's scientifically-backed spaced repetition system.

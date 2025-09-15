@@ -3,7 +3,7 @@ import type {
   UserProgress as BaseUserProgress, 
   LearningStats,
   FilterSettings 
-} from '@shared/schema';
+} from '../types/schema';
 import vocabularyData from '../data/vocabulary.json';
 
 // Local storage interface for user progress - simpler than database schema
