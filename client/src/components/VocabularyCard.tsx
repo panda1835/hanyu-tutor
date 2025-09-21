@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Bookmark, BookmarkCheck } from "lucide-react";
+import { CheckCircle, XCircle, Bookmark } from "lucide-react";
 import type { VocabularyWord } from "../types/schema";
 import { vocabularyService } from "../lib/vocabularyService";
 
@@ -25,6 +25,11 @@ export default function VocabularyCard({
   const [isBookmarked, setIsBookmarked] = useState(
     vocabularyService.isWordBookmarked(word.id!)
   );
+
+  // Update bookmark state when word changes
+  useEffect(() => {
+    setIsBookmarked(vocabularyService.isWordBookmarked(word.id!));
+  }, [word.id]);
 
   const handleCorrect = () => {
     console.log('Correct answer for:', word.character);
@@ -54,22 +59,20 @@ export default function VocabularyCard({
         onClick={!disabled ? onFlip : undefined}
       >
         {/* Bookmark button - positioned absolutely in top-right */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleBookmark();
-          }}
-          data-testid="button-bookmark"
-          className="absolute top-2 right-2 flex items-center space-x-1"
-        >
-          {isBookmarked ? (
-            <BookmarkCheck className="h-4 w-4 text-yellow-500" />
-          ) : (
-            <Bookmark className="h-4 w-4" />
-          )}
-        </Button>
+        <div className="absolute top-2 right-2 z-10">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBookmark();
+            }}
+            data-testid="button-bookmark"
+            className="flex items-center space-x-1"
+          >
+            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+          </Button>
+        </div>
 
         {!showAnswer ? (
           // Character side

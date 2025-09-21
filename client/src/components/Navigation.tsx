@@ -8,11 +8,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BookOpen, Settings, Menu, Sun, Moon, BarChart3 } from "lucide-react";
+import { BookOpen, Settings, Menu, Sun, Moon, BarChart3, Bookmark } from "lucide-react";
 
 interface NavigationProps {
-  currentPage: 'home' | 'study' | 'stats';
-  onPageChange: (page: 'home' | 'study' | 'stats') => void;
+  currentPage: 'home' | 'study' | 'stats' | 'bookmarks';
+  onPageChange: (page: 'home' | 'study' | 'stats' | 'bookmarks') => void;
   onSettingsOpen: () => void;
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
@@ -57,6 +57,16 @@ export default function Navigation({
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Study</span>
+              </Button>
+              <Button
+                variant={currentPage === 'bookmarks' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => onPageChange('bookmarks')}
+                data-testid="nav-bookmarks"
+                className="flex items-center space-x-2"
+              >
+                <Bookmark className="h-4 w-4" />
+                <span>Bookmarks</span>
               </Button>
               <Button
                 variant={currentPage === 'stats' ? 'default' : 'ghost'}
@@ -125,6 +135,16 @@ export default function Navigation({
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Study
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      onPageChange('bookmarks');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    data-testid="mobile-nav-bookmarks"
+                  >
+                    <Bookmark className="h-4 w-4 mr-2" />
+                    Bookmarks
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => {

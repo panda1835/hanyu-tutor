@@ -12,13 +12,14 @@ import ProgressTracker from "./components/ProgressTracker";
 import FilterPanel from "./components/FilterPanel";
 import StudySession from "./components/StudySession";
 import Settings from "./components/Settings";
+import BookmarkedWords from "./components/BookmarkedWords";
 
 import { vocabularyService } from "./lib/vocabularyService";
 import type { VocabularyWord } from "./types/schema";
 
 
 type StudyMode = 'learn' | 'review';
-type AppPage = 'home' | 'study' | 'stats';
+type AppPage = 'home' | 'study' | 'stats' | 'bookmarks';
 
 function App() {
   // Theme state
@@ -32,6 +33,7 @@ function App() {
   const [studyMode, setStudyMode] = useState<StudyMode>('learn');
   const [isInSession, setIsInSession] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [bookmarkedStudyWords, setBookmarkedStudyWords] = useState<VocabularyWord[]>([]);
 
   // Filter and settings state
   const [filterSettings, setFilterSettings] = useState({
@@ -72,6 +74,11 @@ function App() {
   // Persist app settings
   useEffect(() => {
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
+    // Update vocabulary service with new settings
+    vocabularyService.updateSettings({
+      dailyGoal: appSettings.dailyGoal,
+      reviewLimit: appSettings.reviewLimit
+    });
   }, [appSettings]);
 
   // Initialize vocabulary data
@@ -79,7 +86,13 @@ function App() {
     // Vocabulary is automatically loaded from JSON in the service constructor
     setVocabularyLoaded(true);
     setIsLoading(false);
-  }, []);
+    
+    // Initialize vocabulary service with current app settings
+    vocabularyService.updateSettings({
+      dailyGoal: appSettings.dailyGoal,
+      reviewLimit: appSettings.reviewLimit
+    });
+  }, [appSettings.dailyGoal, appSettings.reviewLimit]);
 
   // Update progress stats when needed
   const refreshProgressStats = () => {
@@ -120,10 +133,12 @@ function App() {
     // Refresh progress stats
     refreshProgressStats();
     setIsInSession(false);
+    setBookmarkedStudyWords([]); // Clear bookmarked study words when completing
   };
 
   const handleExitSession = () => {
     setIsInSession(false);
+    setBookmarkedStudyWords([]); // Clear bookmarked study words when exiting
   };
 
   // Show loading state
@@ -145,7 +160,13 @@ function App() {
 
   // Study Session View
   if (isInSession) {
-    const studyWords = studyMode === 'learn' ? learnWords : reviewWords;
+    let studyWords: VocabularyWord[];
+    if (bookmarkedStudyWords.length > 0) {
+      studyWords = bookmarkedStudyWords;
+    } else {
+      studyWords = studyMode === 'learn' ? learnWords : reviewWords;
+    }
+    
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
@@ -279,6 +300,17 @@ function App() {
                   </div>
                 </Card>
               </div>
+            )}
+
+            {currentPage === 'bookmarks' && (
+              <BookmarkedWords
+                onStartStudy={(words) => {
+                  // Start a study session with bookmarked words
+                  setStudyMode('review'); // Default to review mode for bookmarked words
+                  setBookmarkedStudyWords(words);
+                  setIsInSession(true);
+                }}
+              />
             )}
           </main>
 
