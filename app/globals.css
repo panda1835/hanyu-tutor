@@ -1,0 +1,358 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Google Fonts - Source Serif 4 for Latin text */
+/* @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&display=swap'); */
+
+/* Noto Serif SC for Chinese characters (similar to Source Han Serif SC) */
+/* @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap'); */
+
+@custom-variant dark (&:is(.dark *));
+
+/* Paper & Ink Theme - Design Tokens */
+:root {
+  /* Core Colors */
+  --paper: #F5F3EF;
+  --paper-dark: #E8E4DC;
+  --ink: #1F2937;
+  --ink-light: #374151;
+  --accent: #92400E;
+  --accent-hover: #7C2D12;
+  --accent-light: #B45309;
+  
+  /* Semantic Colors */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: rgba(255, 255, 255, 0.6);
+  --card-foreground: var(--ink);
+  --popover: rgba(255, 255, 255, 0.95);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: #FFFFFF;
+  --secondary: rgba(255, 255, 255, 0.6);
+  --secondary-foreground: var(--ink);
+  --muted: rgba(0, 0, 0, 0.05);
+  --muted-foreground: rgba(31, 41, 55, 0.6);
+  --accent-bg: rgba(146, 64, 14, 0.1);
+  --accent-foreground: var(--accent);
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: var(--accent);
+  
+  /* Typography */
+  --font-chinese: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-latin: 'Source Serif 4', Georgia, serif;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  
+  /* Spacing & Radius */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.75rem;
+}
+
+/* Dark Mode Colors */
+.dark {
+  --paper: #0B1220;
+  --paper-dark: #0F172A;
+  --ink: #E5E7EB;
+  --ink-light: #D1D5DB;
+  
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: rgba(255, 255, 255, 0.05);
+  --card-foreground: var(--ink);
+  --popover: rgba(15, 23, 42, 0.95);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: #FFFFFF;
+  --secondary: rgba(255, 255, 255, 0.05);
+  --secondary-foreground: var(--ink);
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(229, 231, 235, 0.6);
+  --accent-bg: rgba(146, 64, 14, 0.2);
+  --accent-foreground: #D97706;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #D97706;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-bg);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  
+  /* Custom theme colors */
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-seal: var(--accent);
+  --color-seal-hover: var(--accent-hover);
+}
+
+/* Base Styles */
+* {
+  border-color: var(--border);
+}
+
+html {
+  font-family: var(--font-latin);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-latin);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Classes */
+.font-chinese {
+  font-family: var(--font-chinese);
+}
+
+.font-latin {
+  font-family: var(--font-latin);
+}
+
+/* Pinyin styling - smaller, lightly spaced */
+.pinyin {
+  font-family: var(--font-latin);
+  font-style: italic;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+/* Paper texture background (very subtle) */
+.paper-texture {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(120, 100, 80, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(120, 100, 80, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 100, 80, 0.02) 0%, transparent 30%);
+}
+
+.dark .paper-texture {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(200, 180, 150, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(200, 180, 150, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(200, 180, 150, 0.015) 0%, transparent 30%);
+}
+
+/* Flashcard Flip Animation */
+.perspective {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.flashcard-flip {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flashcard-flip.flipped {
+  transform: rotateY(180deg);
+}
+
+/* Bookmark folded page corner effect */
+.bookmark-corner {
+  position: relative;
+}
+
+.bookmark-corner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 24px 24px 0;
+  border-color: transparent var(--accent) transparent transparent;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.bookmark-corner.bookmarked::after {
+  opacity: 1;
+}
+
+/* Button Styles */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  background-color: var(--accent);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background-color: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Card Styles */
+.paper-card {
+  border-radius: 1.5rem;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.flashcard {
+  border-radius: 1.5rem;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  min-height: 320px;
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 0.5rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: var(--muted);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: var(--accent);
+  transition: width 0.5s;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
