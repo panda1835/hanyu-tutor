@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { Flashcard } from '@/components/Flashcard'
-import { FilterBar } from '@/components/FilterBar'
-import { useAuth } from '@/components/AuthProvider'
-import { createClient } from '@/lib/supabase'
-import { getWordsByFilters, getVocabularyCount, type VocabularyItem } from '@/lib/vocabulary'
-import { calculateNextReviewDate, formatDateForDB } from '@/lib/spaced-repetition'
+import { Header } from '@/src/components/Header'
+import { Flashcard } from '@/src/components/Flashcard'
+import { FilterBar } from '@/src/components/FilterBar'
+import { useAuth } from '@/src/components/AuthProvider'
+import { createClient } from '@/src/lib/supabase'
+import { getWordsByFilters, getVocabularyCount, type VocabularyItem } from '@/src/lib/vocabulary'
+import { calculateNextReviewDate, formatDateForDB } from '@/src/lib/spaced-repetition'
 import { BookOpen, PartyPopper, Loader2 } from 'lucide-react'
 
 export default function LearnPage() {

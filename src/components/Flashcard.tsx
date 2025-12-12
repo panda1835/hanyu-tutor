@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
-import type { VocabularyItem } from '@/lib/vocabulary'
+import type { VocabularyItem } from '@/src/lib/vocabulary'
 
 interface FlashcardProps {
   word: VocabularyItem

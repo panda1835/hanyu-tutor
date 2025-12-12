@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { Flashcard } from '@/components/Flashcard'
-import { useAuth } from '@/components/AuthProvider'
-import { createClient, type WordProgress } from '@/lib/supabase'
-import { getWordByCharacter, type VocabularyItem } from '@/lib/vocabulary'
+import { Header } from '@/src/components/Header'
+import { Flashcard } from '@/src/components/Flashcard'
+import { useAuth } from '@/src/components/AuthProvider'
+import { createClient, type WordProgress } from '@/src/lib/supabase'
+import { getWordByCharacter, type VocabularyItem } from '@/src/lib/vocabulary'
 import { 
   calculateNextReviewDate, 
   formatDateForDB, 
@@ -14,7 +14,7 @@ import {
   getIntervalDays,
   getWordState,
   isMastered
-} from '@/lib/spaced-repetition'
+} from '@/src/lib/spaced-repetition'
 import { RotateCcw, PartyPopper, Loader2, Calendar } from 'lucide-react'
 
 interface ReviewWord {

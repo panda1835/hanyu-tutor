@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { useAuth } from '@/components/AuthProvider'
-import { createClient } from '@/lib/supabase'
-import { formatDateForDB } from '@/lib/spaced-repetition'
+import { Header } from '@/src/components/Header'
+import { useAuth } from '@/src/components/AuthProvider'
+import { createClient } from '@/src/lib/supabase'
+import { formatDateForDB } from '@/src/lib/spaced-repetition'
 import { 
   BarChart3, 
   Loader2, 

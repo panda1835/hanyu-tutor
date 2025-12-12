@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { Flashcard, FlashcardSimple } from '@/components/Flashcard'
-import { useAuth } from '@/components/AuthProvider'
-import { createClient } from '@/lib/supabase'
-import { getWordByCharacter, type VocabularyItem } from '@/lib/vocabulary'
+import { Header } from '@/src/components/Header'
+import { Flashcard, FlashcardSimple } from '@/src/components/Flashcard'
+import { useAuth } from '@/src/components/AuthProvider'
+import { createClient } from '@/src/lib/supabase'
+import { getWordByCharacter, type VocabularyItem } from '@/src/lib/vocabulary'
 import { Bookmark, Loader2, BookX, X } from 'lucide-react'
 
 interface BookmarkedWord {

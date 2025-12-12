@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronDown, X } from 'lucide-react'
-import { getUniqueLevels, getUniqueCategories } from '@/lib/vocabulary'
+import { getUniqueLevels, getUniqueCategories } from '@/src/lib/vocabulary'
 
 interface FilterBarProps {
   selectedLevel: string | null

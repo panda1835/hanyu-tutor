@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
-import { useAuth } from '@/components/AuthProvider'
-import { useTheme } from '@/components/ThemeProvider'
-import { createClient } from '@/lib/supabase'
+import { Header } from '@/src/components/Header'
+import { useAuth } from '@/src/components/AuthProvider'
+import { useTheme } from '@/src/components/ThemeProvider'
+import { createClient } from '@/src/lib/supabase'
 import { 
   Settings as SettingsIcon, 
   Loader2, 

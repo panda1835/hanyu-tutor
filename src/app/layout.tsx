@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { AuthProvider } from "@/components/AuthProvider";
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { ThemeProvider } from "@/src/components/ThemeProvider";
+import { AuthProvider } from "@/src/components/AuthProvider";
+import { ServiceWorkerRegistration } from "@/src/components/ServiceWorkerRegistration";
 
 export const metadata: Metadata = {
   title: "Hanzi Ledger - Chinese Vocabulary Learning",
