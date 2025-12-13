@@ -1,5 +1,5 @@
 // app/page.tsx
-'use client'
+"use client";
 
 import Link from "next/link";
 import { useAuth } from "@/src/components/AuthProvider";
@@ -13,7 +13,7 @@ export default function HomePage() {
   useEffect(() => {
     // If user is signed in, redirect to learn page
     if (!loading && user) {
-      router.push('/learn');
+      router.push("/learn");
     }
   }, [user, loading, router]);
 
@@ -21,7 +21,9 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F3EF] dark:bg-[#0B1220]">
-        <div className="text-sm text-black/60 dark:text-white/60">Loading...</div>
+        <div className="text-sm text-black/60 dark:text-white/60">
+          Loading...
+        </div>
       </div>
     );
   }
