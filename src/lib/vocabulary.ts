@@ -20,15 +20,15 @@ export function getVocabulary(): VocabularyItem[] {
 }
 
 /**
- * Get vocabulary items filtered by level and/or category
+ * Get vocabulary items filtered by levels and/or categories (supports multiple selection)
  */
 export function getWordsByFilters(
-  level?: string | null,
-  category?: string | null
+  levels?: string[] | null,
+  categories?: string[] | null
 ): VocabularyItem[] {
   return vocabulary.filter((word) => {
-    const matchesLevel = !level || word.level === level
-    const matchesCategory = !category || word.category === category
+    const matchesLevel = !levels || levels.length === 0 || levels.includes(word.level)
+    const matchesCategory = !categories || categories.length === 0 || categories.includes(word.category)
     return matchesLevel && matchesCategory
   })
 }

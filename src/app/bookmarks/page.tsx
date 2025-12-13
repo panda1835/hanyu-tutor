@@ -1,95 +1,101 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Header } from '@/src/components/Header'
-import { Flashcard, FlashcardSimple } from '@/src/components/Flashcard'
-import { useAuth } from '@/src/components/AuthProvider'
-import { createClient } from '@/src/lib/supabase'
-import { getWordByCharacter, type VocabularyItem } from '@/src/lib/vocabulary'
-import { Bookmark, Loader2, BookX, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Header } from "@/src/components/Header";
+import { Flashcard, FlashcardSimple } from "@/src/components/Flashcard";
+import { useAuth } from "@/src/components/AuthProvider";
+import { createClient } from "@/src/lib/supabase";
+import { getWordByCharacter, type VocabularyItem } from "@/src/lib/vocabulary";
+import { Bookmark, Loader2, BookX, X } from "lucide-react";
 
 interface BookmarkedWord {
-  id: string
-  word_character: string
-  vocabulary: VocabularyItem
+  id: string;
+  word_character: string;
+  vocabulary: VocabularyItem;
 }
 
 export default function BookmarksPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const supabase = createClient()
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   // State
-  const [bookmarks, setBookmarks] = useState<BookmarkedWord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedWord, setSelectedWord] = useState<BookmarkedWord | null>(null)
+  const [bookmarks, setBookmarks] = useState<BookmarkedWord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedWord, setSelectedWord] = useState<BookmarkedWord | null>(null);
 
   // Load bookmarks
   const loadBookmarks = useCallback(async () => {
-    if (!user) return
+    if (!user) return;
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       const { data: bookmarkData } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("bookmarks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (bookmarkData) {
-        const bookmarkedWords: BookmarkedWord[] = []
+        const bookmarkedWords: BookmarkedWord[] = [];
         for (const bookmark of bookmarkData) {
-          const vocabulary = getWordByCharacter(bookmark.word_character)
+          const vocabulary = getWordByCharacter(bookmark.word_character);
           if (vocabulary) {
             bookmarkedWords.push({
               id: bookmark.id,
               word_character: bookmark.word_character,
-              vocabulary
-            })
+              vocabulary,
+            });
           }
         }
-        setBookmarks(bookmarkedWords)
+        setBookmarks(bookmarkedWords);
       }
     } catch (error) {
-      console.error('Error loading bookmarks:', error)
+      console.error("Error loading bookmarks:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [user, supabase])
+  }, [user, supabase]);
 
   useEffect(() => {
     if (user) {
-      loadBookmarks()
+      loadBookmarks();
+    } else if (!authLoading) {
+      setLoading(false);
     }
-  }, [user, loadBookmarks])
+  }, [user, authLoading, loadBookmarks]);
 
   // Remove bookmark
   const removeBookmark = async (wordCharacter: string) => {
-    if (!user) return
+    if (!user) return;
 
     try {
       await supabase
-        .from('bookmarks')
+        .from("bookmarks")
         .delete()
-        .eq('user_id', user.id)
-        .eq('word_character', wordCharacter)
+        .eq("user_id", user.id)
+        .eq("word_character", wordCharacter);
 
-      setBookmarks(prev => prev.filter(b => b.word_character !== wordCharacter))
-      
+      setBookmarks((prev) =>
+        prev.filter((b) => b.word_character !== wordCharacter)
+      );
+
       if (selectedWord?.word_character === wordCharacter) {
-        setSelectedWord(null)
+        setSelectedWord(null);
       }
     } catch (error) {
-      console.error('Error removing bookmark:', error)
+      console.error("Error removing bookmark:", error);
     }
-  }
+  };
 
   // Redirect if not authenticated
   if (!authLoading && !user) {
-    router.push('/login')
-    return null
+    router.push("/login");
+    return null;
   }
 
   return (
@@ -129,7 +135,7 @@ export default function BookmarksPage() {
             </p>
             <div className="mt-6">
               <button
-                onClick={() => router.push('/learn')}
+                onClick={() => router.push("/learn")}
                 className="btn-primary"
               >
                 Start Learning
@@ -140,35 +146,30 @@ export default function BookmarksPage() {
           <>
             {/* Count */}
             <div className="mb-4 text-sm text-muted-foreground">
-              {bookmarks.length} bookmarked word{bookmarks.length !== 1 ? 's' : ''}
+              {bookmarks.length} bookmarked word
+              {bookmarks.length !== 1 ? "s" : ""}
             </div>
 
             {/* Selected Word Modal */}
             {selectedWord && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <div className="relative w-full max-w-md animate-slide-up">
+                <div className="relative w-full max-w-md animate-slide-up bg-background rounded-3xl p-6 shadow-2xl">
                   <button
                     onClick={() => setSelectedWord(null)}
-                    className="absolute -right-2 -top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-card border border-border shadow-md hover:bg-muted"
+                    className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </button>
                   <Flashcard
                     word={selectedWord.vocabulary}
                     mode="learn"
                     isBookmarked={true}
-                    onBookmarkToggle={() => removeBookmark(selectedWord.word_character)}
+                    onBookmarkToggle={() =>
+                      removeBookmark(selectedWord.word_character)
+                    }
                     onAnswer={() => setSelectedWord(null)}
                     showActions={false}
                   />
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => setSelectedWord(null)}
-                      className="btn-secondary"
-                    >
-                      Close
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
@@ -180,7 +181,9 @@ export default function BookmarksPage() {
                   key={bookmark.id}
                   word={bookmark.vocabulary}
                   isBookmarked={true}
-                  onBookmarkToggle={() => removeBookmark(bookmark.word_character)}
+                  onBookmarkToggle={() =>
+                    removeBookmark(bookmark.word_character)
+                  }
                   onClick={() => setSelectedWord(bookmark)}
                 />
               ))}
@@ -189,5 +192,5 @@ export default function BookmarksPage() {
         )}
       </main>
     </div>
-  )
+  );
 }

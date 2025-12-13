@@ -17,9 +17,6 @@ export default function HomePage() {
               <div className="text-sm font-semibold tracking-wide">
                 Hanzi Ledger
               </div>
-              <div className="text-xs text-black/60 dark:text-white/60">
-                Paper & ink flashcards • calm repetition
-              </div>
             </div>
           </Link>
 
@@ -77,8 +74,8 @@ export default function HomePage() {
             </h1>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-black/70 dark:text-white/70">
               Filter by level or topic. Flip a card. Mark what you know. Review
-              only what’s due, guided by a Fibonacci schedule—quietly consistent,
-              daily.
+              only what’s due, guided by a Fibonacci schedule—quietly
+              consistent, daily.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -131,10 +128,7 @@ export default function HomePage() {
 
               <div className="relative space-y-4">
                 {/* Card: front */}
-                <PaperCard
-                  headerLeft="Learn • New word"
-                  headerRight={<BookmarkIcon />}
-                >
+                <PaperCard headerRight={<BookmarkIcon />}>
                   <div className="mt-6 text-center">
                     <div className="text-6xl font-semibold tracking-tight">
                       你
@@ -166,7 +160,6 @@ export default function HomePage() {
 
                 {/* Card: back */}
                 <PaperCard
-                  headerLeft="Review • Due today"
                   headerRight={
                     <span className="rounded-full border border-black/10 bg-white/60 px-2 py-1 text-[11px] font-medium text-black/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
                       Interval: 2 days
@@ -212,15 +205,33 @@ export default function HomePage() {
       <section className="border-t border-black/10 bg-white/30 dark:border-white/10 dark:bg-white/5">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Feature icon="🗂️" title="Curated filters" desc="Choose by level and category." />
-            <Feature icon="🖋️" title="Binary feedback" desc="Keep decisions simple: know / don’t." />
-            <Feature icon="📆" title="Fibonacci schedule" desc="Intervals: 1,2,3,5,8,13,21,34." />
-            <Feature icon="🏁" title="Clear mastery" desc="Reach 34 days to master a word." />
+            <Feature
+              icon="🗂️"
+              title="Curated filters"
+              desc="Choose by level and category."
+            />
+            <Feature
+              icon="🖋️"
+              title="Binary feedback"
+              desc="Keep decisions simple: know / don’t."
+            />
+            <Feature
+              icon="📆"
+              title="Fibonacci schedule"
+              desc="Intervals: 1,2,3,5,8,13,21,34."
+            />
+            <Feature
+              icon="🏁"
+              title="Clear mastery"
+              desc="Reach 34 days to master a word."
+            />
           </div>
 
           <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-3xl border border-black/10 bg-white/50 p-6 shadow-sm dark:border-white/10 dark:bg-white/5 sm:flex-row">
             <div>
-              <div className="text-sm font-semibold">Start a gentle routine</div>
+              <div className="text-sm font-semibold">
+                Start a gentle routine
+              </div>
               <div className="mt-1 text-sm text-black/70 dark:text-white/70">
                 Set daily goals for new words and reviews. Keep a streak with
                 small, consistent sessions.
@@ -242,13 +253,22 @@ export default function HomePage() {
         <div className="flex flex-col justify-between gap-3 sm:flex-row">
           <div>© {new Date().getFullYear()} Hanzi Ledger</div>
           <div className="flex gap-4">
-            <Link href="/privacy" className="hover:text-black/80 dark:hover:text-white/80">
+            <Link
+              href="/privacy"
+              className="hover:text-black/80 dark:hover:text-white/80"
+            >
               Privacy
             </Link>
-            <Link href="/terms" className="hover:text-black/80 dark:hover:text-white/80">
+            <Link
+              href="/terms"
+              className="hover:text-black/80 dark:hover:text-white/80"
+            >
               Terms
             </Link>
-            <Link href="/about" className="hover:text-black/80 dark:hover:text-white/80">
+            <Link
+              href="/about"
+              className="hover:text-black/80 dark:hover:text-white/80"
+            >
               About
             </Link>
           </div>
@@ -259,20 +279,15 @@ export default function HomePage() {
 }
 
 function PaperCard({
-  headerLeft,
   headerRight,
   children,
 }: {
-  headerLeft: string;
   headerRight: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-[28px] border border-black/10 bg-white/60 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
       <div className="flex items-start justify-between gap-3">
-        <div className="text-xs font-medium text-black/60 dark:text-white/60">
-          {headerLeft}
-        </div>
         {headerRight}
       </div>
       {children}

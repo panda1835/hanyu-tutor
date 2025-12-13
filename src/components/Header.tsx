@@ -1,39 +1,56 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuth } from './AuthProvider'
-import { useTheme } from './ThemeProvider'
-import { Sun, Moon, Monitor, Menu, X, BookOpen, RotateCcw, Bookmark, BarChart3, Settings, LogOut, User } from 'lucide-react'
-import { useState } from 'react'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "./AuthProvider";
+import { useTheme } from "./ThemeProvider";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Menu,
+  X,
+  BookOpen,
+  RotateCcw,
+  Bookmark,
+  BarChart3,
+  Settings,
+  LogOut,
+  User,
+} from "lucide-react";
+import { useState } from "react";
 
 const navLinks = [
-  { href: '/learn', label: 'Learn', icon: BookOpen },
-  { href: '/review', label: 'Review', icon: RotateCcw },
-  { href: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
-  { href: '/stats', label: 'Stats', icon: BarChart3 },
-]
+  { href: "/learn", label: "Learn", icon: BookOpen },
+  { href: "/review", label: "Review", icon: RotateCcw },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
+];
 
 export function Header() {
-  const pathname = usePathname()
-  const { user, signOut, loading } = useAuth()
-  const { theme, setTheme } = useTheme()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const pathname = usePathname();
+  const { user, signOut, loading } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const themeIcons = {
     light: Sun,
     dark: Moon,
-    system: Monitor
-  }
-  const ThemeIcon = themeIcons[theme]
+    system: Monitor,
+  };
+  const ThemeIcon = themeIcons[theme];
 
   const cycleTheme = () => {
-    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']
-    const currentIndex = themes.indexOf(theme)
-    const nextIndex = (currentIndex + 1) % themes.length
-    setTheme(themes[nextIndex])
-  }
+    const themes: Array<"light" | "dark" | "system"> = [
+      "light",
+      "dark",
+      "system",
+    ];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -41,12 +58,13 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
-            <span className="font-chinese text-lg font-semibold tracking-tight">印</span>
+            <span className="font-chinese text-lg font-semibold tracking-tight">
+              印
+            </span>
           </span>
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-wide">Hanzi Ledger</div>
-            <div className="hidden text-xs text-muted-foreground sm:block">
-              Paper & ink flashcards
+            <div className="text-sm font-semibold tracking-wide">
+              Hanzi Ledger
             </div>
           </div>
         </Link>
@@ -59,8 +77,8 @@ export function Header() {
               href={href}
               className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                 pathname === href
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -92,16 +110,16 @@ export function Header() {
               >
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline max-w-[120px] truncate">
-                  {user.email?.split('@')[0]}
+                  {user.email?.split("@")[0]}
                 </span>
               </button>
 
               {/* User Dropdown */}
               {userMenuOpen && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setUserMenuOpen(false)} 
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserMenuOpen(false)}
                   />
                   <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-border bg-popover p-1 shadow-lg">
                     <Link
@@ -114,8 +132,8 @@ export function Header() {
                     </Link>
                     <button
                       onClick={() => {
-                        signOut()
-                        setUserMenuOpen(false)
+                        signOut();
+                        setUserMenuOpen(false);
                       }}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
                     >
@@ -127,10 +145,7 @@ export function Header() {
               )}
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="btn-primary h-10 px-4 text-sm"
-            >
+            <Link href="/login" className="btn-primary h-10 px-4 text-sm">
               Sign in
             </Link>
           )}
@@ -141,7 +156,11 @@ export function Header() {
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-sm font-medium shadow-sm transition-colors hover:bg-muted md:hidden"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
@@ -157,8 +176,8 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                   pathname === href
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -170,9 +189,9 @@ export function Header() {
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  pathname === '/settings'
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  pathname === "/settings"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Settings className="h-5 w-5" />
@@ -183,5 +202,5 @@ export function Header() {
         </div>
       )}
     </header>
-  )
+  );
 }

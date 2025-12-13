@@ -1,25 +1,25 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Google Fonts - Source Serif 4 for Latin text */
-/* @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&display=swap'); */
+/* Google Fonts - Inter for Latin text (sans-serif) */
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'); */
 
-/* Noto Serif SC for Chinese characters (similar to Source Han Serif SC) */
-/* @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap'); */
+/* Noto Sans SC for Chinese characters */
+/* @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap'); */
 
 @custom-variant dark (&:is(.dark *));
 
 /* Paper & Ink Theme - Design Tokens */
 :root {
   /* Core Colors */
-  --paper: #F5F3EF;
-  --paper-dark: #E8E4DC;
-  --ink: #1F2937;
+  --paper: #f5f3ef;
+  --paper-dark: #e8e4dc;
+  --ink: #1f2937;
   --ink-light: #374151;
-  --accent: #92400E;
-  --accent-hover: #7C2D12;
-  --accent-light: #B45309;
-  
+  --accent: #92400e;
+  --accent-hover: #7c2d12;
+  --accent-light: #b45309;
+
   /* Semantic Colors */
   --background: var(--paper);
   --foreground: var(--ink);
@@ -28,24 +28,24 @@
   --popover: rgba(255, 255, 255, 0.95);
   --popover-foreground: var(--ink);
   --primary: var(--accent);
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #ffffff;
   --secondary: rgba(255, 255, 255, 0.6);
   --secondary-foreground: var(--ink);
   --muted: rgba(0, 0, 0, 0.05);
   --muted-foreground: rgba(31, 41, 55, 0.6);
   --accent-bg: rgba(146, 64, 14, 0.1);
   --accent-foreground: var(--accent);
-  --destructive: #DC2626;
-  --destructive-foreground: #FFFFFF;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
   --input: rgba(0, 0, 0, 0.1);
   --ring: var(--accent);
-  
-  /* Typography */
-  --font-chinese: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
-  --font-latin: 'Source Serif 4', Georgia, serif;
-  --font-sans: system-ui, -apple-system, sans-serif;
-  
+
+  /* Typography - Sans-serif fonts */
+  --font-chinese: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-latin: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
   /* Spacing & Radius */
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
@@ -58,11 +58,11 @@
 
 /* Dark Mode Colors */
 .dark {
-  --paper: #0B1220;
-  --paper-dark: #0F172A;
-  --ink: #E5E7EB;
-  --ink-light: #D1D5DB;
-  
+  --paper: #0b1220;
+  --paper-dark: #0f172a;
+  --ink: #e5e7eb;
+  --ink-light: #d1d5db;
+
   --background: var(--paper);
   --foreground: var(--ink);
   --card: rgba(255, 255, 255, 0.05);
@@ -70,18 +70,18 @@
   --popover: rgba(15, 23, 42, 0.95);
   --popover-foreground: var(--ink);
   --primary: var(--accent);
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #ffffff;
   --secondary: rgba(255, 255, 255, 0.05);
   --secondary-foreground: var(--ink);
   --muted: rgba(255, 255, 255, 0.05);
   --muted-foreground: rgba(229, 231, 235, 0.6);
   --accent-bg: rgba(146, 64, 14, 0.2);
-  --accent-foreground: #D97706;
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
+  --accent-foreground: #d97706;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.1);
-  --ring: #D97706;
+  --ring: #d97706;
 }
 
 @theme inline {
@@ -107,7 +107,7 @@
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
-  
+
   /* Custom theme colors */
   --color-paper: var(--paper);
   --color-ink: var(--ink);
@@ -151,17 +151,39 @@ body {
 
 /* Paper texture background (very subtle) */
 .paper-texture {
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(120, 100, 80, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(120, 100, 80, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(120, 100, 80, 0.02) 0%, transparent 30%);
+  background-image: radial-gradient(
+      circle at 20% 80%,
+      rgba(120, 100, 80, 0.03) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(120, 100, 80, 0.03) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(120, 100, 80, 0.02) 0%,
+      transparent 30%
+    );
 }
 
 .dark .paper-texture {
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(200, 180, 150, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(200, 180, 150, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(200, 180, 150, 0.015) 0%, transparent 30%);
+  background-image: radial-gradient(
+      circle at 20% 80%,
+      rgba(200, 180, 150, 0.02) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(200, 180, 150, 0.02) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(200, 180, 150, 0.015) 0%,
+      transparent 30%
+    );
 }
 
 /* Flashcard Flip Animation */
@@ -189,29 +211,6 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Bookmark folded page corner effect */
-.bookmark-corner {
-  position: relative;
-}
-
-.bookmark-corner::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 24px 24px 0;
-  border-color: transparent var(--accent) transparent transparent;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.bookmark-corner.bookmarked::after {
-  opacity: 1;
-}
-
 /* Button Styles */
 .btn-primary {
   display: inline-flex;
@@ -225,6 +224,7 @@ body {
   background-color: var(--accent);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   transition: background-color 0.2s;
+  cursor: pointer;
 }
 
 .btn-primary:hover {
@@ -244,6 +244,7 @@ body {
   color: var(--foreground);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   transition: background-color 0.2s;
+  cursor: pointer;
 }
 
 .btn-secondary:hover {
@@ -252,6 +253,11 @@ body {
 
 .dark .btn-secondary:hover {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* All buttons should have pointer cursor */
+button {
+  cursor: pointer;
 }
 
 /* Card Styles */
@@ -337,7 +343,8 @@ body {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -355,4 +362,34 @@ body {
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Chip/Tag for multi-select */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--accent-bg);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.filter-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.filter-chip-remove:hover {
+  opacity: 0.8;
 }

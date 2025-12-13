@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createClient } from '@/src/lib/supabase'
 
@@ -31,20 +31,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const initializedRef = useRef(false)
   
-  const supabase = createClient()
+  // Create supabase client once using useRef to avoid recreating on each render
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   useEffect(() => {
+    // Prevent double initialization in strict mode
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    let mounted = true
+
     // Get initial session
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+        }
+        
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
       } catch (error) {
         console.error('Error getting session:', error)
-      } finally {
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -53,6 +71,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        if (!mounted) return
+        
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
@@ -65,9 +85,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, []) // Empty deps - supabase client is stored in ref
 
   // Initialize user settings and streak on first sign in
   const initializeUserData = async (userId: string) => {

@@ -1,23 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X, Check } from 'lucide-react'
 import { getUniqueLevels, getUniqueCategories } from '@/src/lib/vocabulary'
 
 interface FilterBarProps {
-  selectedLevel: string | null
-  selectedCategory: string | null
-  onLevelChange: (level: string | null) => void
-  onCategoryChange: (category: string | null) => void
+  selectedLevels: string[]
+  selectedCategories: string[]
+  onLevelsChange: (levels: string[]) => void
+  onCategoriesChange: (categories: string[]) => void
   totalCount?: number
   filteredCount?: number
 }
 
 export function FilterBar({
-  selectedLevel,
-  selectedCategory,
-  onLevelChange,
-  onCategoryChange,
+  selectedLevels,
+  selectedCategories,
+  onLevelsChange,
+  onCategoriesChange,
   totalCount,
   filteredCount
 }: FilterBarProps) {
@@ -31,7 +31,23 @@ export function FilterBar({
     setCategories(getUniqueCategories())
   }, [])
 
-  const hasFilters = selectedLevel || selectedCategory
+  const hasFilters = selectedLevels.length > 0 || selectedCategories.length > 0
+
+  const toggleLevel = (level: string) => {
+    if (selectedLevels.includes(level)) {
+      onLevelsChange(selectedLevels.filter(l => l !== level))
+    } else {
+      onLevelsChange([...selectedLevels, level])
+    }
+  }
+
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      onCategoriesChange(selectedCategories.filter(c => c !== category))
+    } else {
+      onCategoriesChange([...selectedCategories, category])
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
@@ -44,12 +60,18 @@ export function FilterBar({
               setCategoryOpen(false)
             }}
             className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-              selectedLevel
+              selectedLevels.length > 0
                 ? 'border-[var(--accent)] bg-accent/10 text-[var(--accent)]'
                 : 'border-border bg-background text-foreground hover:bg-muted'
             }`}
           >
-            <span>{selectedLevel || 'All Levels'}</span>
+            <span>
+              {selectedLevels.length === 0 
+                ? 'All Levels' 
+                : selectedLevels.length === 1 
+                  ? selectedLevels[0]
+                  : `${selectedLevels.length} Levels`}
+            </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${levelOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -59,11 +81,11 @@ export function FilterBar({
               <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-48 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg">
                 <button
                   onClick={() => {
-                    onLevelChange(null)
+                    onLevelsChange([])
                     setLevelOpen(false)
                   }}
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
-                    !selectedLevel ? 'bg-muted font-medium' : ''
+                    selectedLevels.length === 0 ? 'bg-muted font-medium' : ''
                   }`}
                 >
                   All Levels
@@ -71,15 +93,15 @@ export function FilterBar({
                 {levels.map((level) => (
                   <button
                     key={level}
-                    onClick={() => {
-                      onLevelChange(level)
-                      setLevelOpen(false)
-                    }}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
-                      selectedLevel === level ? 'bg-muted font-medium' : ''
+                    onClick={() => toggleLevel(level)}
+                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
+                      selectedLevels.includes(level) ? 'bg-muted font-medium' : ''
                     }`}
                   >
-                    {level}
+                    <span>{level}</span>
+                    {selectedLevels.includes(level) && (
+                      <Check className="h-4 w-4 text-[var(--accent)]" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -95,12 +117,18 @@ export function FilterBar({
               setLevelOpen(false)
             }}
             className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-              selectedCategory
+              selectedCategories.length > 0
                 ? 'border-[var(--accent)] bg-accent/10 text-[var(--accent)]'
                 : 'border-border bg-background text-foreground hover:bg-muted'
             }`}
           >
-            <span className="max-w-[150px] truncate">{selectedCategory || 'All Categories'}</span>
+            <span className="max-w-[150px] truncate">
+              {selectedCategories.length === 0 
+                ? 'All Categories' 
+                : selectedCategories.length === 1 
+                  ? selectedCategories[0]
+                  : `${selectedCategories.length} Categories`}
+            </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${categoryOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -110,11 +138,11 @@ export function FilterBar({
               <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg">
                 <button
                   onClick={() => {
-                    onCategoryChange(null)
+                    onCategoriesChange([])
                     setCategoryOpen(false)
                   }}
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
-                    !selectedCategory ? 'bg-muted font-medium' : ''
+                    selectedCategories.length === 0 ? 'bg-muted font-medium' : ''
                   }`}
                 >
                   All Categories
@@ -122,15 +150,15 @@ export function FilterBar({
                 {categories.map((category) => (
                   <button
                     key={category}
-                    onClick={() => {
-                      onCategoryChange(category)
-                      setCategoryOpen(false)
-                    }}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
-                      selectedCategory === category ? 'bg-muted font-medium' : ''
+                    onClick={() => toggleCategory(category)}
+                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
+                      selectedCategories.includes(category) ? 'bg-muted font-medium' : ''
                     }`}
                   >
-                    {category}
+                    <span className="truncate">{category}</span>
+                    {selectedCategories.includes(category) && (
+                      <Check className="h-4 w-4 text-[var(--accent)] shrink-0" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -142,8 +170,8 @@ export function FilterBar({
         {hasFilters && (
           <button
             onClick={() => {
-              onLevelChange(null)
-              onCategoryChange(null)
+              onLevelsChange([])
+              onCategoriesChange([])
             }}
             className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
@@ -161,6 +189,34 @@ export function FilterBar({
           </span>
         )}
       </div>
+
+      {/* Selected Filter Chips */}
+      {hasFilters && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selectedLevels.map(level => (
+            <span key={level} className="filter-chip">
+              {level}
+              <button 
+                onClick={() => toggleLevel(level)}
+                className="filter-chip-remove"
+              >
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          ))}
+          {selectedCategories.map(category => (
+            <span key={category} className="filter-chip">
+              {category}
+              <button 
+                onClick={() => toggleCategory(category)}
+                className="filter-chip-remove"
+              >
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

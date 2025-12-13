@@ -6,7 +6,8 @@ import { ServiceWorkerRegistration } from "@/src/components/ServiceWorkerRegistr
 
 export const metadata: Metadata = {
   title: "Hanzi Ledger - Chinese Vocabulary Learning",
-  description: "Learn Chinese vocabulary with flashcards and spaced repetition. Paper & ink themed, calm and focused study.",
+  description:
+    "Learn Chinese vocabulary with flashcards and spaced repetition.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -20,7 +21,8 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Hanzi Ledger",
     title: "Hanzi Ledger - Chinese Vocabulary Learning",
-    description: "Learn Chinese vocabulary with flashcards and spaced repetition.",
+    description:
+      "Learn Chinese vocabulary with flashcards and spaced repetition.",
   },
 };
 

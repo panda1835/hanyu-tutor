@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/src/components/Header'
 import { useAuth } from '@/src/components/AuthProvider'
 import { useTheme } from '@/src/components/ThemeProvider'
 import { createClient } from '@/src/lib/supabase'
+import type { FlashcardFrontMode } from '@/src/components/Flashcard'
 import { 
   Settings as SettingsIcon, 
   Loader2, 
@@ -13,22 +14,43 @@ import {
   Sun,
   Moon,
   Monitor,
-  Check
+  Check,
+  Languages,
+  BookOpen,
+  Shuffle
 } from 'lucide-react'
+
+// Helper for localStorage flashcard mode
+const FLASHCARD_MODE_KEY = 'hanzi-ledger-flashcard-mode'
+
+export function getFlashcardFrontMode(): FlashcardFrontMode {
+  if (typeof window === 'undefined') return 'chinese'
+  return (localStorage.getItem(FLASHCARD_MODE_KEY) as FlashcardFrontMode) || 'chinese'
+}
+
+export function setFlashcardFrontMode(mode: FlashcardFrontMode) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(FLASHCARD_MODE_KEY, mode)
+  // Dispatch event so other components can react
+  window.dispatchEvent(new CustomEvent('flashcard-mode-change', { detail: mode }))
+}
 
 export default function SettingsPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const { theme, setTheme } = useTheme()
-  const supabase = createClient()
+  
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const [dailyNewGoal, setDailyNewGoal] = useState(10)
   const [dailyReviewGoal, setDailyReviewGoal] = useState(20)
+  const [flashcardMode, setFlashcardModeState] = useState<FlashcardFrontMode>('chinese')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Load settings
+  // Load settings from Supabase and localStorage
   const loadSettings = useCallback(async () => {
     if (!user) return
 
@@ -45,6 +67,9 @@ export default function SettingsPage() {
         setDailyNewGoal(data.daily_new_word_goal)
         setDailyReviewGoal(data.daily_review_goal)
       }
+      
+      // Load flashcard mode from localStorage (client-side only)
+      setFlashcardModeState(getFlashcardFrontMode())
     } catch (error) {
       console.error('Error loading settings:', error)
     } finally {
@@ -55,10 +80,18 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user) {
       loadSettings()
+    } else if (!authLoading) {
+      setLoading(false)
     }
-  }, [user, loadSettings])
+  }, [user, authLoading, loadSettings])
 
-  // Save settings
+  // Handle flashcard mode change (instant, no save needed)
+  const handleFlashcardModeChange = (mode: FlashcardFrontMode) => {
+    setFlashcardModeState(mode)
+    setFlashcardFrontMode(mode)
+  }
+
+  // Save Supabase settings (daily goals only)
   const saveSettings = async () => {
     if (!user) return
 
@@ -98,6 +131,12 @@ export default function SettingsPage() {
     { value: 'system', label: 'System', icon: Monitor }
   ] as const
 
+  const flashcardModeOptions = [
+    { value: 'chinese' as FlashcardFrontMode, label: 'Chinese Only', icon: Languages, description: 'Show Chinese character on front' },
+    { value: 'definition' as FlashcardFrontMode, label: 'Definition Only', icon: BookOpen, description: 'Show English definition on front' },
+    { value: 'mixed' as FlashcardFrontMode, label: 'Mixed', icon: Shuffle, description: 'Randomly show Chinese or definition' }
+  ]
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -125,7 +164,46 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Daily Goals */}
+            {/* Flashcard Front Mode - Client-side, instant */}
+            <div className="paper-card">
+              <h2 className="mb-2 text-lg font-semibold">Flashcard Display</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Choose what to show on the front of flashcards. Changes apply instantly.
+              </p>
+
+              <div className="space-y-3">
+                {flashcardModeOptions.map(({ value, label, icon: Icon, description }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleFlashcardModeChange(value)}
+                    className={`w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
+                      flashcardMode === value
+                        ? 'border-[var(--accent)] bg-accent/10'
+                        : 'border-border bg-card hover:bg-muted'
+                    }`}
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                      flashcardMode === value ? 'bg-[var(--accent)] text-white' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className={`font-medium ${flashcardMode === value ? 'text-[var(--accent)]' : ''}`}>
+                        {label}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {description}
+                      </div>
+                    </div>
+                    {flashcardMode === value && (
+                      <Check className="h-5 w-5 text-[var(--accent)] shrink-0 mt-2" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily Goals - Stored in Supabase */}
             <div className="paper-card">
               <h2 className="mb-4 text-lg font-semibold">Daily Goals</h2>
               <p className="mb-6 text-sm text-muted-foreground">
@@ -192,13 +270,13 @@ export default function SettingsPage() {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      Save Changes
+                      Save Goals
                     </>
                   )}
                 </button>
                 {saved && (
                   <span className="text-sm text-green-600">
-                    Settings updated successfully
+                    Goals updated successfully
                   </span>
                 )}
               </div>
