@@ -1,7 +1,37 @@
 // app/page.tsx
+'use client'
+
 import Link from "next/link";
+import { useAuth } from "@/src/components/AuthProvider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If user is signed in, redirect to learn page
+    if (!loading && user) {
+      router.push('/learn');
+    }
+  }, [user, loading, router]);
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F3EF] dark:bg-[#0B1220]">
+        <div className="text-sm text-black/60 dark:text-white/60">Loading...</div>
+      </div>
+    );
+  }
+
+  // If user is signed in, show nothing (redirect will happen)
+  if (user) {
+    return null;
+  }
+
+  // Show landing page only if user is not signed in
   return (
     <main className="min-h-screen bg-[#F5F3EF] text-[#1F2937] dark:bg-[#0B1220] dark:text-[#E5E7EB]">
       {/* Top bar */}
