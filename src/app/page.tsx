@@ -15,7 +15,8 @@ export default function HomePage() {
     if (!loading && user) {
       router.push("/learn");
     }
-  }, [user, loading, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
 
   // Show loading state while checking auth
   if (loading) {

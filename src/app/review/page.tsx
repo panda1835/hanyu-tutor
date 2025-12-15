@@ -124,7 +124,8 @@ export default function ReviewPage() {
     } else if (!authLoading) {
       setLoading(false);
     }
-  }, [user, authLoading, loadDueWords]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   // Handle answer
   const handleAnswer = async (correct: boolean) => {

@@ -150,7 +150,8 @@ export default function LearnPage() {
     } else if (!authLoading) {
       setLoading(false);
     }
-  }, [user, authLoading, selectedLevels, selectedCategories, loadNewWords]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, selectedLevels, selectedCategories]);
 
   // Handle answer (learn word)
   const handleAnswer = async (correct: boolean) => {
