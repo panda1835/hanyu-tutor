@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { AuthProvider } from "@/src/components/AuthProvider";
-import { ServiceWorkerRegistration } from "@/src/components/ServiceWorkerRegistration";
 
 export const metadata: Metadata = {
   title: "Hanzi Ledger - Chinese Vocabulary Learning",
@@ -49,10 +48,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-latin antialiased">
         <ThemeProvider defaultTheme="system">
-          <AuthProvider>
-            <ServiceWorkerRegistration />
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

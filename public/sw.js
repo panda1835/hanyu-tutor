@@ -1,79 +1,104 @@
 // Service Worker for Hanzi Ledger PWA
-const CACHE_NAME = 'hanzi-ledger-v1';
+// Update this version on each deployment to force cache refresh
+const CACHE_VERSION = "2025-12-16-04-58-19";
+const CACHE_NAME = `hanzi-ledger-${CACHE_VERSION}`;
+
+// Static assets to cache
+const STATIC_CACHE = `${CACHE_NAME}-static`;
+const DYNAMIC_CACHE = `${CACHE_NAME}-dynamic`;
 
 // Files to cache for offline access
-const urlsToCache = [
-  '/',
-  '/learn',
-  '/review',
-  '/bookmarks',
-  '/stats',
-  '/settings',
-  '/manifest.json'
-];
+const urlsToCache = ["/manifest.json"];
 
 // Install event - cache core files
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(STATIC_CACHE).then((cache) => {
       return cache.addAll(urlsToCache);
     })
   );
+  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
 // Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // Delete any cache that doesn't match current version
+          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            console.log("Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  self.clients.claim();
+  // Take control of all pages immediately
+  return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
+// Fetch event - Network-first strategy for HTML, cache-first for assets
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
   // Skip non-GET requests
-  if (event.request.method !== 'GET') {
+  if (request.method !== "GET") {
     return;
   }
 
-  // Skip Supabase API requests (always go to network)
-  if (event.request.url.includes('supabase')) {
+  // Always use network for Supabase API requests
+  if (url.hostname.includes("supabase")) {
     return;
   }
 
+  // Network-first strategy for HTML pages and Next.js routes
+  if (
+    request.headers.get("accept")?.includes("text/html") ||
+    url.pathname.startsWith("/_next/") ||
+    url.pathname === "/" ||
+    url.pathname.match(
+      /^\/(learn|review|bookmarks|stats|settings|login|register)$/
+    )
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Only cache successful responses
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache on network error
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  // Cache-first for static assets (images, fonts, etc.)
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached response if found
-      if (response) {
-        return response;
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
       }
 
-      // Clone the request
-      const fetchRequest = event.request.clone();
-
-      return fetch(fetchRequest).then((response) => {
-        // Check if valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+      return fetch(request).then((response) => {
+        // Cache valid responses
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseToCache = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
         }
-
-        // Clone the response
-        const responseToCache = response.clone();
-
-        // Cache the fetched response
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return response;
       });
     })

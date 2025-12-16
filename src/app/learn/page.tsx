@@ -16,7 +16,7 @@ import {
   calculateNextReviewDate,
   formatDateForDB,
 } from "@/src/lib/spaced-repetition";
-import { BookOpen, PartyPopper, Loader2, ArrowRight } from "lucide-react";
+import { BookOpen, PartyPopper, Loader2 } from "lucide-react";
 
 export default function LearnPage() {
   const router = useRouter();
@@ -32,6 +32,9 @@ export default function LearnPage() {
   // Words state
   const [allNewWords, setAllNewWords] = useState<VocabularyItem[]>([]);
   const [currentBatch, setCurrentBatch] = useState<VocabularyItem[]>([]);
+  const [lastCompletedBatch, setLastCompletedBatch] = useState<
+    VocabularyItem[]
+  >([]);
   const [dontKnowWords, setDontKnowWords] = useState<VocabularyItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,8 +48,8 @@ export default function LearnPage() {
 
   // Batch state
   const [showBatchComplete, setShowBatchComplete] = useState(false);
-  const [showGoalReached, setShowGoalReached] = useState(false);
   const [isReviewingDontKnow, setIsReviewingDontKnow] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
 
   const totalVocabulary = getVocabularyCount();
 
@@ -128,14 +131,28 @@ export default function LearnPage() {
       // Calculate remaining to reach goal
       const remainingToGoal = Math.max(0, goal - todayLearned);
 
-      // Create initial batch - limit to remaining goal
-      const batchSize = Math.min(remainingToGoal, shuffled.length);
-      setCurrentBatch(shuffled.slice(0, batchSize));
+      // Determine initial state based on goal and available words
+      if (todayLearned >= goal) {
+        // Goal already reached on refresh - show completion state with Continue Learning option
+        setShowBatchComplete(true);
+        setCurrentBatch([]);
+        setLastCompletedBatch([]);
+      } else if (shuffled.length === 0) {
+        // No words available - show empty state
+        setCurrentBatch([]);
+        setLastCompletedBatch([]);
+      } else {
+        // Goal not reached - show learning cards
+        const batchSize = Math.min(remainingToGoal, shuffled.length);
+        setCurrentBatch(shuffled.slice(0, batchSize));
+        setShowBatchComplete(false);
+        setLastCompletedBatch([]);
+      }
+
       setCurrentIndex(0);
       setDontKnowWords([]);
       setIsReviewingDontKnow(false);
-      setShowBatchComplete(false);
-      setShowGoalReached(todayLearned >= goal);
+      setIsReviewMode(false);
     } catch (error) {
       console.error("Error loading words:", error);
     } finally {
@@ -145,11 +162,26 @@ export default function LearnPage() {
 
   // Load words when filters change or on mount
   useEffect(() => {
+    // Add timeout to prevent infinite loading state
+    let timeoutId: NodeJS.Timeout | undefined;
+
     if (user) {
       loadNewWords();
     } else if (!authLoading) {
       setLoading(false);
+    } else {
+      // Safety timeout if auth is stuck loading
+      timeoutId = setTimeout(() => {
+        if (loading && !user) {
+          console.warn("Learn page loading timeout");
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, selectedLevels, selectedCategories]);
 
@@ -168,6 +200,16 @@ export default function LearnPage() {
         });
       }
       // Move to next word
+      setCurrentIndex((prev) => prev + 1);
+      return;
+    }
+
+    // If in review mode, just move to next word without saving
+    if (isReviewMode) {
+      // Remove from don't know list if present
+      setDontKnowWords((prev) =>
+        prev.filter((w) => w.character !== currentWord.character)
+      );
       setCurrentIndex((prev) => prev + 1);
       return;
     }
@@ -282,6 +324,10 @@ export default function LearnPage() {
           setCurrentIndex(0);
         } else {
           // No "don't know" words - batch complete
+          // Only save batch if not in review mode (to preserve original batch)
+          if (!isReviewMode) {
+            setLastCompletedBatch(currentBatch);
+          }
           setShowBatchComplete(true);
         }
       }
@@ -292,21 +338,27 @@ export default function LearnPage() {
     isReviewingDontKnow,
     dontKnowWords.length,
     loading,
+    currentBatch,
+    isReviewMode,
   ]);
 
   // Load next batch
   const loadNextBatch = () => {
+    // Find where to continue from
+    const batchToUse =
+      lastCompletedBatch.length > 0 ? lastCompletedBatch : currentBatch;
     const currentBatchEnd =
-      allNewWords.indexOf(currentBatch[currentBatch.length - 1]) + 1;
+      batchToUse.length > 0
+        ? allNewWords.indexOf(batchToUse[batchToUse.length - 1]) + 1
+        : 0;
     const remainingWords = allNewWords.slice(currentBatchEnd);
 
-    // If daily goal not reached, limit batch size to remaining goal
-    // If already reached or exceeded goal, allow batches of up to 10 words
+    // Always allow continuing learning regardless of daily goal
     const remainingToGoal = Math.max(0, dailyGoal - learnedToday);
     const batchSize =
       remainingToGoal === 0
-        ? Math.min(10, remainingWords.length) // Goal reached, just load up to 10
-        : Math.min(remainingToGoal, remainingWords.length, 10); // Limit to goal
+        ? Math.min(dailyGoal, remainingWords.length) // Goal reached, use daily goal size
+        : Math.min(remainingToGoal, remainingWords.length); // Limit to remaining goal
 
     if (batchSize > 0) {
       setCurrentBatch(remainingWords.slice(0, batchSize));
@@ -314,6 +366,13 @@ export default function LearnPage() {
       setDontKnowWords([]);
       setIsReviewingDontKnow(false);
       setShowBatchComplete(false);
+      setLastCompletedBatch([]);
+      setIsReviewMode(false);
+    } else {
+      // No more words available
+      setCurrentBatch([]);
+      setLastCompletedBatch([]);
+      setShowBatchComplete(true);
     }
   };
 
@@ -456,106 +515,112 @@ export default function LearnPage() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground">Loading words...</p>
           </div>
-        ) : showGoalReached ? (
-          <div className="paper-card py-16 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <PartyPopper className="h-8 w-8 text-green-600" />
-            </div>
-            <h2 className="text-xl font-semibold">Daily Goal Reached!</h2>
-            <p className="mt-2 text-muted-foreground">
-              You&apos;ve learned {dailyGoal} new words today. Great work!
-            </p>
-            <div className="mt-6 flex justify-center gap-3">
-              <button
-                onClick={() => router.push("/review")}
-                className="btn-secondary"
-              >
-                Go to Review
-              </button>
-              <button
-                onClick={() => {
-                  setShowGoalReached(false);
-                  // Load more words beyond daily goal
-                  const currentBatchEnd =
-                    allNewWords.indexOf(currentBatch[currentBatch.length - 1]) +
-                    1;
-                  const remainingWords = allNewWords.slice(currentBatchEnd);
-                  const batchSize = Math.min(10, remainingWords.length);
-                  if (batchSize > 0) {
-                    setCurrentBatch(remainingWords.slice(0, batchSize));
-                    setCurrentIndex(0);
-                    setDontKnowWords([]);
-                    setIsReviewingDontKnow(false);
-                  }
-                }}
-                className="btn-primary"
-              >
-                Continue Learning
-              </button>
-            </div>
-          </div>
         ) : showBatchComplete ? (
           <div className="paper-card py-16 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
               <PartyPopper className="h-8 w-8 text-[var(--accent)]" />
             </div>
-            <h2 className="text-xl font-semibold">Batch Complete!</h2>
-            <p className="mt-2 text-muted-foreground">
-              You&apos;ve finished this batch of words.
-              {learnedToday >= dailyGoal
-                ? " You've also reached your daily goal!"
-                : ` ${dailyGoal - learnedToday} more to reach your daily goal.`}
-            </p>
-            <div className="mt-6 flex justify-center gap-3">
-              <button
-                onClick={() => router.push("/review")}
-                className="btn-secondary"
-              >
-                Go to Review
-              </button>
-              <button
-                onClick={loadNextBatch}
-                disabled={!canLoadMore}
-                className="btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue Learning
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
+
+            {learnedToday >= dailyGoal ? (
+              <>
+                <h2 className="text-xl font-semibold">Daily Goal Reached!</h2>
+                <p className="mt-2 text-muted-foreground">
+                  You&apos;ve learned {dailyGoal} new words today. Great work!
+                  {canLoadMore &&
+                    " You can continue learning more if you'd like."}
+                </p>
+                <div className="mt-6 flex justify-center gap-3">
+                  {(currentBatch.length > 0 ||
+                    lastCompletedBatch.length > 0) && (
+                    <button
+                      onClick={() => {
+                        // Restart the batch for review with shuffled cards
+                        const batchToReview =
+                          lastCompletedBatch.length > 0
+                            ? lastCompletedBatch
+                            : currentBatch;
+                        const shuffled = [...batchToReview].sort(
+                          () => Math.random() - 0.5
+                        );
+                        setCurrentBatch(shuffled);
+                        setCurrentIndex(0);
+                        setDontKnowWords([]);
+                        setIsReviewingDontKnow(false);
+                        setShowBatchComplete(false);
+                        setIsReviewMode(true);
+                        // Keep lastCompletedBatch preserved for future reviews
+                      }}
+                      className="btn-secondary"
+                    >
+                      Review Batch
+                    </button>
+                  )}
+                  {canLoadMore && (
+                    <button
+                      onClick={loadNextBatch}
+                      className="btn-primary inline-flex items-center gap-2"
+                    >
+                      Continue Learning
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold">Batch Complete!</h2>
+                <p className="mt-2 text-muted-foreground">
+                  You&apos;ve finished this batch of words.
+                  {` ${
+                    dailyGoal - learnedToday
+                  } more to reach your daily goal.`}
+                </p>
+                <div className="mt-6 flex justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      // Restart the batch for review with shuffled cards
+                      const batchToReview =
+                        lastCompletedBatch.length > 0
+                          ? lastCompletedBatch
+                          : currentBatch;
+                      const shuffled = [...batchToReview].sort(
+                        () => Math.random() - 0.5
+                      );
+                      setCurrentBatch(shuffled);
+                      setCurrentIndex(0);
+                      setDontKnowWords([]);
+                      setIsReviewingDontKnow(false);
+                      setShowBatchComplete(false);
+                      setIsReviewMode(true);
+                      // Keep lastCompletedBatch preserved for future reviews
+                    }}
+                    className="btn-secondary"
+                  >
+                    Review Batch
+                  </button>
+                  <button
+                    onClick={loadNextBatch}
+                    disabled={!canLoadMore}
+                    className="btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Continue Learning
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        ) : !currentWord ? (
+        ) : allNewWords.length === 0 ? (
           <div className="paper-card py-16 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
-              <PartyPopper className="h-8 w-8 text-[var(--accent)]" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <BookOpen className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-semibold">All caught up!</h2>
+            <h2 className="text-xl font-semibold">No New Words Available</h2>
             <p className="mt-2 text-muted-foreground">
-              {allNewWords.length === 0 &&
-              (selectedLevels.length > 0 || selectedCategories.length > 0)
-                ? "No new words match your filters. Try adjusting them."
-                : "You&apos;ve learned all available words. Check back for reviews!"}
+              You&apos;ve learned all available words matching your filters.
+              <br />
+              Try adjusting your filters or check back later for more content.
             </p>
-            <div className="mt-6 flex justify-center gap-3">
-              {(selectedLevels.length > 0 || selectedCategories.length > 0) && (
-                <button
-                  onClick={() => {
-                    setSelectedLevels([]);
-                    setSelectedCategories([]);
-                  }}
-                  className="btn-secondary"
-                >
-                  Clear filters
-                </button>
-              )}
-              <button
-                onClick={() => router.push("/review")}
-                className="btn-primary"
-              >
-                Go to Review
-              </button>
-            </div>
           </div>
-        ) : (
+        ) : currentWord ? (
           <>
             {/* Status indicator */}
             <div className="mb-4 text-center text-sm text-muted-foreground">
@@ -594,6 +659,16 @@ export default function LearnPage() {
               />
             </div>
           </>
+        ) : (
+          <div className="paper-card py-16 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <BookOpen className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold">Ready to Learn</h2>
+            <p className="mt-2 text-muted-foreground">
+              Select your preferences above and start learning!
+            </p>
+          </div>
         )}
       </main>
     </div>
