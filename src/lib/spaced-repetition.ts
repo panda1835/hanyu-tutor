@@ -1,8 +1,8 @@
 /**
  * Fibonacci-based Spaced Repetition System
- * 
+ *
  * Intervals (in days): [1, 2, 3, 5, 8, 13, 21, 34, 55]
- * 
+ *
  * Rules:
  * - First review starts at 1 day after learning
  * - Correct answer: advance to next interval
@@ -11,10 +11,10 @@
  */
 
 // Fibonacci-based intervals in days
-export const INTERVALS = [1, 2, 3, 5, 8, 13, 21, 34, 55] as const
+export const INTERVALS = [1, 2, 3, 5, 8, 13, 21, 34, 55] as const;
 
 // Maximum interval index (mastery threshold)
-export const MAX_INTERVAL_INDEX = INTERVALS.length - 1
+export const MAX_INTERVAL_INDEX = INTERVALS.length - 1;
 
 /**
  * Get the next interval index based on answer correctness
@@ -22,14 +22,17 @@ export const MAX_INTERVAL_INDEX = INTERVALS.length - 1
  * @param correct - Whether the user answered correctly
  * @returns New interval index
  */
-export function getNextIntervalIndex(currentIndex: number, correct: boolean): number {
+export function getNextIntervalIndex(
+  currentIndex: number,
+  correct: boolean
+): number {
   if (!correct) {
     // Reset to beginning on incorrect answer
-    return 0
+    return 0;
   }
-  
+
   // Advance to next interval, capped at max
-  return Math.min(currentIndex + 1, MAX_INTERVAL_INDEX)
+  return Math.min(currentIndex + 1, MAX_INTERVAL_INDEX);
 }
 
 /**
@@ -38,21 +41,25 @@ export function getNextIntervalIndex(currentIndex: number, correct: boolean): nu
  * @returns Date object for next review
  */
 export function calculateNextReviewDate(intervalIndex: number): Date {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // Normalize to start of day
-  
-  const daysToAdd = INTERVALS[Math.min(intervalIndex, MAX_INTERVAL_INDEX)]
-  const nextDate = new Date(today)
-  nextDate.setDate(nextDate.getDate() + daysToAdd)
-  
-  return nextDate
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+  const daysToAdd = INTERVALS[Math.min(intervalIndex, MAX_INTERVAL_INDEX)];
+  const nextDate = new Date(today);
+  nextDate.setDate(nextDate.getDate() + daysToAdd);
+
+  return nextDate;
 }
 
 /**
  * Format date to ISO string (YYYY-MM-DD) for database storage
  */
 export function formatDateForDB(date: Date): string {
-  return date.toISOString().split('T')[0]
+  // Use local date parts to avoid timezone shifting a future date into "yesterday"
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -61,14 +68,14 @@ export function formatDateForDB(date: Date): string {
  * @returns Whether the word is mastered
  */
 export function isMastered(intervalIndex: number): boolean {
-  return intervalIndex >= MAX_INTERVAL_INDEX
+  return intervalIndex >= MAX_INTERVAL_INDEX;
 }
 
 /**
  * Get the interval in days for a given index
  */
 export function getIntervalDays(intervalIndex: number): number {
-  return INTERVALS[Math.min(intervalIndex, MAX_INTERVAL_INDEX)]
+  return INTERVALS[Math.min(intervalIndex, MAX_INTERVAL_INDEX)];
 }
 
 /**
@@ -77,24 +84,26 @@ export function getIntervalDays(intervalIndex: number): number {
  * @returns Whether the word is due today or overdue
  */
 export function isDueForReview(nextReviewDate: string | Date | null): boolean {
-  if (!nextReviewDate) return false
-  
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  const reviewDate = new Date(nextReviewDate)
-  reviewDate.setHours(0, 0, 0, 0)
-  
-  return reviewDate <= today
+  if (!nextReviewDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const reviewDate = new Date(nextReviewDate);
+  reviewDate.setHours(0, 0, 0, 0);
+
+  return reviewDate <= today;
 }
 
 /**
  * Get word state based on interval index
  */
-export function getWordState(intervalIndex: number): 'learning' | 'reviewing' | 'mastered' {
-  if (intervalIndex === 0) return 'learning'
-  if (isMastered(intervalIndex)) return 'mastered'
-  return 'reviewing'
+export function getWordState(
+  intervalIndex: number
+): "learning" | "reviewing" | "mastered" {
+  if (intervalIndex === 0) return "learning";
+  if (isMastered(intervalIndex)) return "mastered";
+  return "reviewing";
 }
 
 /**
@@ -107,27 +116,29 @@ export function calculateStreak(
   lastActivityDate: string | null,
   currentStreak: number
 ): { newStreak: number; isNewDay: boolean } {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   if (!lastActivityDate) {
     // First activity ever
-    return { newStreak: 1, isNewDay: true }
+    return { newStreak: 1, isNewDay: true };
   }
-  
-  const lastDate = new Date(lastActivityDate)
-  lastDate.setHours(0, 0, 0, 0)
-  
-  const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-  
+
+  const lastDate = new Date(lastActivityDate);
+  lastDate.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor(
+    (today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
   if (diffDays === 0) {
     // Same day - no streak change
-    return { newStreak: currentStreak, isNewDay: false }
+    return { newStreak: currentStreak, isNewDay: false };
   } else if (diffDays === 1) {
     // Consecutive day - increment streak
-    return { newStreak: currentStreak + 1, isNewDay: true }
+    return { newStreak: currentStreak + 1, isNewDay: true };
   } else {
     // Streak broken - reset to 1
-    return { newStreak: 1, isNewDay: true }
+    return { newStreak: 1, isNewDay: true };
   }
 }
